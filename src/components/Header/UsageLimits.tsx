@@ -42,6 +42,11 @@ export default function UsageLimits() {
     return 'bg-emerald-500';
   };
 
+  const handleUpgradeClick = () => {
+    // Navigate to pricing page
+    window.location.href = '/pricing';
+  };
+
   if (usage.plan === 'premium') {
     return (
       <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-xl">
@@ -73,7 +78,10 @@ export default function UsageLimits() {
 
       {/* Upgrade Button */}
       {usage.plan === 'free' && (
-        <button className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl">
+        <button 
+          onClick={handleUpgradeClick}
+          className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+        >
           <Crown className="w-4 h-4" />
           <span className="text-sm font-medium">{texts.upgrade}</span>
         </button>
