@@ -19,9 +19,9 @@ export interface Intent {
   title: string;
   description: string;
   category: string;
-  requiredSkills?: string[];
-  budget?: number;
-  timeline?: string;
+  requiredSkills?: string[] | null;
+  budget?: number | null;
+  timeline?: string | null;
 }
 
 export class SmartChainBuilder {
@@ -175,8 +175,19 @@ Focus on practical, executable steps that move the project forward efficiently.
 
       console.log(`🔗 Creating smart chain for intent: ${intent.title}`);
 
+      // Convert database intent to our Intent interface
+      const intentForDecomposition: Intent = {
+        id: intent.id,
+        title: intent.title,
+        description: intent.description,
+        category: intent.category,
+        requiredSkills: intent.requiredSkills,
+        budget: intent.budget,
+        timeline: intent.timeline
+      };
+
       // Decompose the intent into steps
-      const steps = await this.decomposeIntent(intent);
+      const steps = await this.decomposeIntent(intentForDecomposition);
 
       // Create the smart chain
       const [chain] = await db.insert(smartChains).values({

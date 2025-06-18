@@ -1,6 +1,6 @@
 import { db } from './db';
 import { intents, offers } from './schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 export interface EmbeddingResponse {
   embedding: number[];
@@ -83,10 +83,10 @@ export class EmbeddingService {
       // Generate embedding
       const embedding = await this.generateEmbedding(embeddingText);
 
-      // Store in PostgreSQL
+      // Store in PostgreSQL as array
       await db.update(intents)
         .set({
-          embedding: `[${embedding.join(',')}]`,
+          embedding: embedding,
           embeddingModel: this.MODEL,
           embeddingGeneratedAt: new Date()
         })
@@ -134,10 +134,10 @@ export class EmbeddingService {
       // Generate embedding
       const embedding = await this.generateEmbedding(embeddingText);
 
-      // Store in PostgreSQL
+      // Store in PostgreSQL as array
       await db.update(offers)
         .set({
-          embedding: `[${embedding.join(',')}]`,
+          embedding: embedding,
           embeddingModel: this.MODEL,
           embeddingGeneratedAt: new Date()
         })
@@ -173,16 +173,17 @@ export class EmbeddingService {
   async findSimilarIntents(queryEmbedding: number[], limit: number = 10, threshold: number = 0.8) {
     try {
       // Use PostgreSQL vector similarity search
-      const results = await db.execute(`
+      const results = await db.execute(sql`
         SELECT 
           id, title, description, category, required_skills,
-          budget, timeline, priority, created_at,
-          embedding <=> '[${queryEmbedding.join(',')}]' as similarity_score
+          budget, timeline, priority, created_at, user_id,
+          target_country, target_city,
+          embedding <=> ${JSON.stringify(queryEmbedding)} as similarity_score
         FROM intents 
         WHERE embedding IS NOT NULL 
           AND status = 'active'
-          AND embedding <=> '[${queryEmbedding.join(',')}]' < ${1 - threshold}
-        ORDER BY embedding <=> '[${queryEmbedding.join(',')}]'
+          AND embedding <=> ${JSON.stringify(queryEmbedding)} < ${1 - threshold}
+        ORDER BY embedding <=> ${JSON.stringify(queryEmbedding)}
         LIMIT ${limit}
       `);
 
@@ -218,11 +219,11 @@ export class EmbeddingService {
     coverage: number;
   }> {
     try {
-      const [totalResult] = await db.execute('SELECT COUNT(*) as total FROM intents WHERE status = \'active\'');
-      const [embeddedResult] = await db.execute('SELECT COUNT(*) as embedded FROM intents WHERE embedding IS NOT NULL AND status = \'active\'');
+      const totalResult = await db.execute(sql`SELECT COUNT(*) as total FROM intents WHERE status = 'active'`);
+      const embeddedResult = await db.execute(sql`SELECT COUNT(*) as embedded FROM intents WHERE embedding IS NOT NULL AND status = 'active'`);
       
-      const total = parseInt(totalResult.total);
-      const embedded = parseInt(embeddedResult.embedded);
+      const total = parseInt(totalResult.rows[0].total as string);
+      const embedded = parseInt(embeddedResult.rows[0].embedded as string);
       const coverage = total > 0 ? (embedded / total) * 100 : 0;
 
       return {

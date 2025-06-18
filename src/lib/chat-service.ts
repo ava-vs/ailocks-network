@@ -369,33 +369,7 @@ export class ChatService {
     }
   }
 
-  private async saveSessionMessages(blobKey: string, messages: ChatMessage[]): Promise<void> {
-    // ONLY for initial setup or full overwrite - use addMessageToBlob for adding single messages
-    if (!blobKey) {
-      throw new Error('Blob key is required');
-    }
-
-    try {
-      console.log(`💾 Full overwrite: Saving ${messages.length} messages to blob:`, blobKey);
-      
-      const { getStore } = await import('@netlify/blobs');
-      const store = getStore('chat-messages');
-      
-      const serializedMessages = messages.map(msg => ({
-        ...msg,
-        timestamp: msg.timestamp.toISOString()
-      }));
-      
-      await store.setJSON(blobKey, serializedMessages);
-      console.log('✅ Full message history saved to blob storage');
-      
-    } catch (error) {
-      console.error('❌ Failed to save full message history:', error);
-      throw error;
-    }
-  }
-
-  async cleanupOldSessions(maxAgeHours: number = 168): Promise<number> { // 7 days default
+  async cleanupOldSessions(): Promise<number> {
     try {
       // For now, just return 0 - we can implement proper cleanup later
       console.log('✅ Cleanup function called (not implemented yet)');
