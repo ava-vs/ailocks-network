@@ -19,7 +19,8 @@
     "db:migrate": "node scripts/apply-migrations.cjs",
     "check:env": "node scripts/check-env.cjs",
     "test:db": "curl http://localhost:8888/.netlify/functions/db-status || curl http://localhost:4321/.netlify/functions/db-status",
-    "test:intents": "curl http://localhost:8888/.netlify/functions/intents-list || curl http://localhost:4321/.netlify/functions/intents-list"
+    "test:intents": "curl http://localhost:8888/.netlify/functions/intents-list || curl http://localhost:4321/.netlify/functions/intents-list",
+    "test:embeddings": "curl http://localhost:8888/.netlify/functions/embedding-health || curl http://localhost:4321/.netlify/functions/embedding-health"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",
@@ -42,7 +43,8 @@
     "tailwindcss": "^3.4.13",
     "typescript": "^5.6.3",
     "@neondatabase/serverless": "^1.0.1",
-    "@netlify/neon": "^0.1.0"
+    "@netlify/neon": "^0.1.0",
+    "pgvector": "^0.2.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",

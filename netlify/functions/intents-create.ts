@@ -1,6 +1,7 @@
 import { db } from '../../src/lib/db';
 import * as schema from '../../src/lib/schema';
 import { chatService } from '../../src/lib/chat-service';
+import { embeddingService } from '../../src/lib/embedding-service';
 
 export default async (request: Request) => {
   if (request.method !== 'POST') {
@@ -68,15 +69,30 @@ export default async (request: Request) => {
     // Create intent in database
     const newIntent = await db.insert(schema.intents).values(intentDataToSave).returning();
 
+    console.log(`✅ Intent created: ${newIntent[0].id} - ${intentDataToSave.title}`);
+
+    // Generate embedding asynchronously (don't wait for completion)
+    if (process.env.OPENAI_API_KEY) {
+      embeddingService.generateAndStoreIntentEmbedding(newIntent[0].id)
+        .then(() => {
+          console.log(`✅ Embedding generated for intent: ${newIntent[0].id}`);
+        })
+        .catch((error) => {
+          console.warn(`⚠️ Failed to generate embedding for intent ${newIntent[0].id}:`, error);
+        });
+    } else {
+      console.warn('⚠️ OpenAI API key not configured, skipping embedding generation');
+    }
+
     // Update chat context with intent creation
     if (sessionId && userId) {
       const intentCreatedMessage = {
         id: `msg-${Date.now()}-system`,
         role: 'assistant' as const,
-        content: `✅ Intent created successfully: "${intentDataToSave.title}". Your collaboration opportunity is now live and visible to potential partners in your area.`,
+        content: `✅ Intent created successfully: "${intentDataToSave.title}". Your collaboration opportunity is now live and visible to potential partners in your area. ${process.env.OPENAI_API_KEY ? 'AI-powered semantic matching is enabled for better discovery.' : ''}`,
         timestamp: new Date(),
         mode: 'system',
-        metadata: { intentId: newIntent[0].id }
+        metadata: { intentId: newIntent[0].id, embeddingEnabled: !!process.env.OPENAI_API_KEY }
       };
 
       await chatService.saveMessage(sessionId, intentCreatedMessage);
@@ -85,7 +101,11 @@ export default async (request: Request) => {
     return new Response(JSON.stringify({
       intent: newIntent[0],
       message: 'Intent created successfully',
-      extractedData: intentDataToSave
+      extractedData: intentDataToSave,
+      features: {
+        embeddingEnabled: !!process.env.OPENAI_API_KEY,
+        semanticSearch: !!process.env.OPENAI_API_KEY
+      }
     }), {
       status: 201,
       headers: {

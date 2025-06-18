@@ -14,9 +14,20 @@ export interface AIOptions {
   mode?: string;
 }
 
+export interface ModelConfig {
+  provider: 'openai' | 'anthropic' | 'openrouter';
+  model: string;
+  cost: number;
+  priority: number;
+  maxTokens: number;
+}
+
 export class UnifiedAIService {
   private openai: OpenAI | null = null;
   private anthropic: Anthropic | null = null;
+  private openrouter: OpenAI | null = null;
+  private errorCounts = new Map<string, number>();
+  private lastErrors = new Map<string, number>();
 
   constructor() {
     // Initialize OpenAI if API key is available
@@ -33,105 +44,140 @@ export class UnifiedAIService {
       });
     }
 
-    // Initialize OpenRouter as fallback
-    if (!this.openai && !this.anthropic && process.env.OPENROUTER_API_KEY) {
-      this.openai = new OpenAI({
+    // Initialize OpenRouter as primary provider for cost optimization
+    if (process.env.OPENROUTER_API_KEY) {
+      this.openrouter = new OpenAI({
         apiKey: process.env.OPENROUTER_API_KEY,
         baseURL: 'https://openrouter.ai/api/v1',
       });
     }
   }
 
-  selectModel(options: AIOptions) {
-    const { complexity, budget } = options;
+  selectModel(options: AIOptions): ModelConfig {
+    const { complexity, budget, mode } = options;
 
-    // Free tier - use OpenRouter or basic models
-    if (budget === 'free') {
-      return {
-        provider: 'openai',
-        model: this.openai?.baseURL?.includes('openrouter') 
-          ? 'microsoft/wizardlm-2-8x22b' 
-          : 'gpt-3.5-turbo',
-        maxTokens: 500
-      };
-    }
+    // ALWAYS START WITH FREE MODEL (90% of requests should use this)
+    const freeModel: ModelConfig = {
+      provider: 'openrouter',
+      model: 'deepseek/deepseek-r1-0528:free',
+      cost: 0.0,
+      priority: 1.0,
+      maxTokens: 1000
+    };
 
-    // Premium tier - use best models
-    if (budget === 'premium' || complexity === 'complex') {
-      if (this.anthropic) {
+    // Only use premium models for complex analysis/creation tasks
+    if (complexity === 'complex') {
+      
+      // ANALYSIS MODE: Complex analysis tasks
+      if (mode === 'analyst') {
         return {
           provider: 'anthropic',
           model: 'claude-3-5-sonnet-20241022',
-          maxTokens: 1000
+          cost: 0.003,
+          priority: 0.8,
+          maxTokens: 1500
         };
       }
-      return {
-        provider: 'openai',
-        model: this.openai?.baseURL?.includes('openrouter') 
-          ? 'anthropic/claude-3.5-sonnet' 
-          : 'gpt-4o',
-        maxTokens: 1000
-      };
+
+      // CREATOR MODE: Complex creative tasks  
+      if (mode === 'creator') {
+        return {
+          provider: 'openai',
+          model: 'gpt-4o',
+          cost: 0.005,
+          priority: 0.7,
+          maxTokens: 1500
+        };
+      }
     }
 
-    // Standard tier - balanced performance
-    return {
-      provider: 'openai',
-      model: this.openai?.baseURL?.includes('openrouter') 
-        ? 'openai/gpt-4o-mini' 
-        : 'gpt-4o-mini',
-      maxTokens: 750
-    };
+    // DEFAULT: Always return free model for simple/medium complexity
+    return freeModel;
   }
 
+  async generateWithCostOptimization(
+    messages: AIMessage[],
+    options: AIOptions,
+    onChunk?: (chunk: string) => void
+  ): Promise<string> {
+    const modelConfig = this.selectModel(options);
+    
+    try {
+      // Try primary model
+      return await this.callModel(modelConfig, messages, onChunk);
+    } catch (error) {
+      console.warn(`Primary model ${modelConfig.model} failed:`, error);
+      
+      // Fallback to free model if not already using it
+      if (modelConfig.model !== 'deepseek/deepseek-r1-0528:free') {
+        try {
+          const freeModel: ModelConfig = {
+            provider: 'openrouter',
+            model: 'deepseek/deepseek-r1-0528:free',
+            cost: 0.0,
+            priority: 1.0,
+            maxTokens: 1000
+          };
+          return await this.callModel(freeModel, messages, onChunk);
+        } catch (fallbackError) {
+          console.warn('Free model also failed:', fallbackError);
+        }
+      }
+      
+      // Final fallback - static response
+      return "I apologize, but I'm experiencing technical difficulties. Please try again later.";
+    }
+  }
+
+  // Legacy method for backward compatibility
   async generateResponse(
     messages: AIMessage[],
     options: AIOptions,
     onChunk?: (chunk: string) => void
   ): Promise<string> {
-    // Check if any AI service is available
-    if (!this.openai && !this.anthropic) {
-      throw new Error('No AI service available. Please configure API keys.');
-    }
+    return this.generateWithCostOptimization(messages, options, onChunk);
+  }
 
-    const selectedModel = this.selectModel(options);
-    
+  private async callModel(
+    config: ModelConfig,
+    messages: AIMessage[],
+    onChunk?: (chunk: string) => void
+  ): Promise<string> {
     // Add system prompt based on mode
-    const systemPrompt = this.getSystemPrompt(options.mode || 'researcher', options.language || 'en');
+    const systemPrompt = this.getSystemPrompt(messages.find(m => m.role === 'system')?.content || '', config);
     const fullMessages = [
       { role: 'system' as const, content: systemPrompt },
-      ...messages
+      ...messages.filter(m => m.role !== 'system')
     ];
 
-    try {
-      if (selectedModel.provider === 'anthropic' && this.anthropic) {
-        return await this.callAnthropic(fullMessages, selectedModel, onChunk);
-      } else if (this.openai) {
-        return await this.callOpenAI(fullMessages, selectedModel, onChunk);
-      } else {
-        throw new Error('No suitable AI provider available');
-      }
-    } catch (error) {
-      console.error('AI Service Error:', error);
-      throw error; // Re-throw to allow fallback handling
+    switch (config.provider) {
+      case 'anthropic':
+        if (!this.anthropic) throw new Error('Anthropic not initialized');
+        return await this.callAnthropic(fullMessages, config, onChunk);
+      
+      case 'openrouter':
+        if (!this.openrouter) throw new Error('OpenRouter not initialized');
+        return await this.callOpenAI(this.openrouter, fullMessages, config, onChunk);
+      
+      case 'openai':
+      default:
+        if (!this.openai) throw new Error('OpenAI not initialized');
+        return await this.callOpenAI(this.openai, fullMessages, config, onChunk);
     }
   }
 
   private async callOpenAI(
+    client: OpenAI,
     messages: AIMessage[],
-    model: any,
+    config: ModelConfig,
     onChunk?: (chunk: string) => void
   ): Promise<string> {
-    if (!this.openai) {
-      throw new Error('OpenAI not initialized');
-    }
-
     if (onChunk) {
       // Streaming response
-      const stream = await this.openai.chat.completions.create({
-        model: model.model,
+      const stream = await client.chat.completions.create({
+        model: config.model,
         messages: messages,
-        max_tokens: model.maxTokens,
+        max_tokens: config.maxTokens,
         temperature: 0.7,
         stream: true,
       });
@@ -147,10 +193,10 @@ export class UnifiedAIService {
       return fullResponse;
     } else {
       // Non-streaming response
-      const response = await this.openai.chat.completions.create({
-        model: model.model,
+      const response = await client.chat.completions.create({
+        model: config.model,
         messages: messages,
-        max_tokens: model.maxTokens,
+        max_tokens: config.maxTokens,
         temperature: 0.7,
       });
 
@@ -160,7 +206,7 @@ export class UnifiedAIService {
 
   private async callAnthropic(
     messages: AIMessage[],
-    model: any,
+    config: ModelConfig,
     onChunk?: (chunk: string) => void
   ): Promise<string> {
     if (!this.anthropic) {
@@ -179,8 +225,8 @@ export class UnifiedAIService {
     if (onChunk) {
       // Streaming response
       const stream = await this.anthropic.messages.create({
-        model: model.model,
-        max_tokens: model.maxTokens,
+        model: config.model,
+        max_tokens: config.maxTokens,
         system: systemMessage?.content || '',
         messages: conversationMessages,
         stream: true,
@@ -198,8 +244,8 @@ export class UnifiedAIService {
     } else {
       // Non-streaming response
       const response = await this.anthropic.messages.create({
-        model: model.model,
-        max_tokens: model.maxTokens,
+        model: config.model,
+        max_tokens: config.maxTokens,
         system: systemMessage?.content || '',
         messages: conversationMessages,
       });
@@ -208,29 +254,27 @@ export class UnifiedAIService {
     }
   }
 
-  private getSystemPrompt(mode: string, language: string): string {
-    const prompts = {
-      en: {
-        researcher: `You are an AI research assistant specializing in market analysis, trend identification, and data synthesis. You help users discover insights, analyze patterns, and make data-driven decisions. You communicate in a professional yet approachable manner, always backing your insights with reasoning. Provide actionable recommendations and cite relevant sources when possible. Focus on thorough research and evidence-based conclusions.`,
-        creator: `You are a creative AI assistant that helps users bring their ideas to life. You excel at brainstorming, ideation, content creation, and project planning. You're enthusiastic, inspiring, and always ready to explore new possibilities while providing practical guidance. Focus on innovative solutions and creative problem-solving. Help users think outside the box while keeping solutions feasible.`,
-        analyst: `You are a strategic AI analyst who excels at breaking down complex problems, identifying root causes, and developing actionable solutions. You think systematically, consider multiple perspectives, and provide clear, structured recommendations. Use frameworks and methodologies to analyze situations thoroughly. Focus on strategic thinking and data-driven insights.`
-      },
-      ru: {
-        researcher: `Вы - ИИ-ассистент исследователь, специализирующийся на анализе рынка, выявлении трендов и синтезе данных. Вы помогаете пользователям находить инсайты, анализировать паттерны и принимать решения на основе данных. Общайтесь профессионально, но доступно, всегда подкрепляя свои выводы аргументацией. Предоставляйте практические рекомендации и ссылайтесь на релевантные источники когда возможно.`,
-        creator: `Вы - креативный ИИ-ассистент, который помогает пользователям воплощать идеи в жизнь. Вы превосходно справляетесь с мозговым штурмом, генерацией идей, созданием контента и планированием проектов. Вы энтузиаст, вдохновляете и всегда готовы исследовать новые возможности, предоставляя практические советы. Фокусируйтесь на инновационных решениях и креативном решении проблем.`,
-        analyst: `Вы - стратегический ИИ-аналитик, который превосходно разбирает сложные проблемы, выявляет первопричины и разрабатывает практические решения. Вы мыслите системно, рассматриваете множественные перспективы и предоставляете четкие, структурированные рекомендации. Используйте фреймворки и методологии для тщательного анализа ситуаций.`
-      }
-    };
-
-    return prompts[language as keyof typeof prompts]?.[mode as keyof typeof prompts.en] || prompts.en.researcher;
+  private getSystemPrompt(existingPrompt: string, config: ModelConfig): string {
+    const basePrompt = existingPrompt || `You are Ailocks, an advanced AI assistant specializing in collaboration and networking. You help users find opportunities, analyze markets, and connect with the right people.`;
+    
+    // Add cost optimization note for free models
+    if (config.cost === 0) {
+      return `${basePrompt}\n\nNote: You are running on a cost-optimized model. Provide concise, helpful responses while maintaining quality.`;
+    }
+    
+    return basePrompt;
   }
 
   // Health check method
   async healthCheck(): Promise<{ status: string; providers: string[] }> {
     const availableProviders = [];
     
+    if (this.openrouter) {
+      availableProviders.push('openrouter');
+    }
+    
     if (this.openai) {
-      availableProviders.push(this.openai.baseURL?.includes('openrouter') ? 'openrouter' : 'openai');
+      availableProviders.push('openai');
     }
     
     if (this.anthropic) {

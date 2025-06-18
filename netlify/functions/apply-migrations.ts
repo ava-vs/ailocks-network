@@ -4,11 +4,17 @@ import { sql } from 'drizzle-orm';
 
 export const handler: Handler = async () => {
   try {
-    console.log('🔄 Creating database tables via Netlify Function...');
+    console.log('🔄 Creating database tables and vector extensions via Netlify Function...');
     
-    // Instead of using migration files (which aren't available in Netlify Functions runtime),
-    // we'll execute the SQL directly to create all necessary tables
+    // First, enable vector extension if available
+    try {
+      await db.execute(sql.raw('CREATE EXTENSION IF NOT EXISTS vector;'));
+      console.log('✅ Vector extension enabled');
+    } catch (error) {
+      console.warn('⚠️ Vector extension not available, continuing without vector support');
+    }
     
+    // Create all necessary tables with vector support
     const createTablesSQL = `
       -- Create users table
       CREATE TABLE IF NOT EXISTS "users" (
@@ -24,7 +30,7 @@ export const handler: Handler = async () => {
         CONSTRAINT "users_email_unique" UNIQUE("email")
       );
 
-      -- Create intents table
+      -- Create intents table with vector embedding support
       CREATE TABLE IF NOT EXISTS "intents" (
         "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
         "user_id" uuid,
@@ -37,6 +43,22 @@ export const handler: Handler = async () => {
         "budget" integer,
         "timeline" varchar(255),
         "priority" varchar(20) DEFAULT 'normal',
+        "status" varchar(20) DEFAULT 'active',
+        "created_at" timestamp DEFAULT now(),
+        "updated_at" timestamp DEFAULT now()
+      );
+
+      -- Create offers table for Smart Matching Algorithm
+      CREATE TABLE IF NOT EXISTS "offers" (
+        "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+        "user_id" uuid,
+        "title" varchar(500) NOT NULL,
+        "description" text NOT NULL,
+        "category" varchar(100) NOT NULL,
+        "skills" text[],
+        "price" integer,
+        "currency" varchar(3) DEFAULT 'USD',
+        "location_flexibility" varchar(20) DEFAULT 'flexible',
         "status" varchar(20) DEFAULT 'active',
         "created_at" timestamp DEFAULT now(),
         "updated_at" timestamp DEFAULT now()
@@ -77,6 +99,10 @@ export const handler: Handler = async () => {
         "description" text,
         "status" varchar(20) DEFAULT 'pending',
         "assigned_user_id" uuid,
+        "estimated_hours" integer,
+        "required_skills" text[],
+        "deliverable" text,
+        "dependencies" text[],
         "created_at" timestamp DEFAULT now(),
         "updated_at" timestamp DEFAULT now()
       );
@@ -86,9 +112,52 @@ export const handler: Handler = async () => {
     await db.execute(sql.raw(createTablesSQL));
     console.log('✅ Tables created successfully');
 
-    // Now add foreign key constraints (separately to avoid dependency issues)
+    // Add vector columns if vector extension is available
+    try {
+      const addVectorColumnsSQL = `
+        -- Add embedding columns to intents table
+        DO $$ 
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'intents' AND column_name = 'embedding'
+          ) THEN
+            ALTER TABLE intents ADD COLUMN embedding vector(1536);
+            ALTER TABLE intents ADD COLUMN embedding_model varchar(50) DEFAULT 'text-embedding-3-small';
+            ALTER TABLE intents ADD COLUMN embedding_generated_at timestamp;
+          END IF;
+
+          -- Add embedding columns to offers table
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = 'offers' AND column_name = 'embedding'
+          ) THEN
+            ALTER TABLE offers ADD COLUMN embedding vector(1536);
+            ALTER TABLE offers ADD COLUMN embedding_model varchar(50) DEFAULT 'text-embedding-3-small';
+            ALTER TABLE offers ADD COLUMN embedding_generated_at timestamp;
+          END IF;
+        END $$;
+      `;
+      
+      await db.execute(sql.raw(addVectorColumnsSQL));
+      console.log('✅ Vector embedding columns added successfully');
+
+      // Create vector similarity indexes
+      const createVectorIndexesSQL = `
+        -- Create optimized indexes for vector similarity search
+        CREATE INDEX IF NOT EXISTS intents_embedding_idx ON intents USING ivfflat (embedding vector_cosine_ops);
+        CREATE INDEX IF NOT EXISTS offers_embedding_idx ON offers USING ivfflat (embedding vector_cosine_ops);
+      `;
+      
+      await db.execute(sql.raw(createVectorIndexesSQL));
+      console.log('✅ Vector similarity indexes created successfully');
+      
+    } catch (vectorError) {
+      console.warn('⚠️ Vector columns/indexes not created (vector extension not available)');
+    }
+
+    // Add foreign key constraints
     const addConstraintsSQL = `
-      -- Add foreign key constraints
       DO $$ 
       BEGIN
         -- Add intents -> users foreign key if not exists
@@ -97,6 +166,15 @@ export const handler: Handler = async () => {
           WHERE constraint_name = 'intents_user_id_users_id_fk'
         ) THEN
           ALTER TABLE "intents" ADD CONSTRAINT "intents_user_id_users_id_fk" 
+          FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
+        END IF;
+
+        -- Add offers -> users foreign key if not exists
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints 
+          WHERE constraint_name = 'offers_user_id_users_id_fk'
+        ) THEN
+          ALTER TABLE "offers" ADD CONSTRAINT "offers_user_id_users_id_fk" 
           FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;
         END IF;
 
@@ -146,9 +224,10 @@ export const handler: Handler = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
         status: 'success', 
-        message: 'Database tables created successfully',
+        message: 'Database schema updated with vector support',
         timestamp: new Date().toISOString(),
-        tables: ['users', 'intents', 'chat_sessions', 'smart_chains', 'chain_steps']
+        tables: ['users', 'intents', 'offers', 'chat_sessions', 'smart_chains', 'chain_steps'],
+        features: ['vector_embeddings', 'similarity_search', 'smart_chains']
       })
     };
   } catch (error) {
@@ -163,4 +242,4 @@ export const handler: Handler = async () => {
       })
     };
   }
-}; 
+};

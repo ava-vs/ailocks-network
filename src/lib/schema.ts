@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, integer, boolean } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, integer, boolean, vector } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -36,6 +36,29 @@ export const intents = pgTable('intents', {
   timeline: varchar('timeline', { length: 255 }),
   priority: varchar('priority', { length: 20 }).default('normal'),
   status: varchar('status', { length: 20 }).default('active'),
+  // Vector embedding support
+  embedding: vector('embedding', { dimensions: 1536 }),
+  embeddingModel: varchar('embedding_model', { length: 50 }).default('text-embedding-3-small'),
+  embeddingGeneratedAt: timestamp('embedding_generated_at'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow()
+});
+
+export const offers = pgTable('offers', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id').references(() => users.id),
+  title: varchar('title', { length: 500 }).notNull(),
+  description: text('description').notNull(),
+  category: varchar('category', { length: 100 }).notNull(),
+  skills: text('skills').array(),
+  price: integer('price'), // in cents
+  currency: varchar('currency', { length: 3 }).default('USD'),
+  locationFlexibility: varchar('location_flexibility', { length: 20 }).default('flexible'),
+  status: varchar('status', { length: 20 }).default('active'),
+  // Vector embedding support
+  embedding: vector('embedding', { dimensions: 1536 }),
+  embeddingModel: varchar('embedding_model', { length: 50 }).default('text-embedding-3-small'),
+  embeddingGeneratedAt: timestamp('embedding_generated_at'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow()
 });
@@ -60,6 +83,10 @@ export const chainSteps = pgTable('chain_steps', {
   description: text('description'),
   status: varchar('status', { length: 20 }).default('pending'),
   assignedUserId: uuid('assigned_user_id').references(() => users.id),
+  estimatedHours: integer('estimated_hours'),
+  requiredSkills: text('required_skills').array(),
+  deliverable: text('deliverable'),
+  dependencies: text('dependencies').array(),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow()
 });
