@@ -42,51 +42,42 @@ export const handler: Handler = async (event) => {
 
     const results = [];
 
-    // Check if users already exist and create/update them
+    // Use Drizzle's `onConflictDoUpdate` (upsert) to handle existing users atomically.
     for (const userData of demoUsersData) {
       try {
-        // Try to find existing user
-        const existingUser = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, userData.id))
-          .limit(1);
-
-        if (existingUser.length > 0) {
-          // Update existing user
-          const [updatedUser] = await db
-            .update(users)
-            .set({
-              email: userData.email,
-              name: userData.name,
-              country: userData.country,
-              city: userData.city,
-              timezone: userData.timezone,
-              languages: userData.languages,
-              updatedAt: new Date()
-            })
-            .where(eq(users.id, userData.id))
-            .returning();
-          
-          console.log(`✅ Updated existing user: ${userData.name} (${userData.id})`);
-          results.push({ action: 'updated', user: updatedUser });
-        } else {
-          // Insert new user with specific ID
-          const [newUser] = await db.insert(users).values({
+        const [result] = await db
+          .insert(users)
+          .values({
             id: userData.id,
             email: userData.email,
             name: userData.name,
             country: userData.country,
             city: userData.city,
             timezone: userData.timezone,
-            languages: userData.languages
-          }).returning();
-          
-          console.log(`✅ Created new user: ${userData.name} (${userData.id})`);
-          results.push({ action: 'created', user: newUser });
-        }
+            languages: userData.languages,
+            updatedAt: new Date(),
+          })
+          .onConflictDoUpdate({
+            // Keep the row keyed by e-mail unique, but NEVER touch the primary key `id` –
+            // changing it would break existing foreign-key references (e.g. `intents.user_id`).
+            target: users.email,
+            // Only mutable, non-referenced columns are updated.
+            set: {
+              name: userData.name,
+              country: userData.country,
+              city: userData.city,
+              timezone: userData.timezone,
+              languages: userData.languages,
+              updatedAt: new Date(),
+            },
+          })
+          .returning();
+        
+        console.log(`✅ Upserted demo user: ${result.name} (${result.id})`);
+        results.push({ action: 'upserted', user: result });
+
       } catch (userError) {
-        console.error(`❌ Failed to create/update user ${userData.name}:`, userError);
+        console.error(`❌ Failed to upsert user ${userData.name}:`, userError);
         results.push({ action: 'failed', error: userError instanceof Error ? userError.message : 'Unknown error', userData });
       }
     }

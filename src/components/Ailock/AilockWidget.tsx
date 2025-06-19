@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Star, Settings } from 'lucide-react';
 import AilockAvatar from './AilockAvatar';
 import AilockDashboard from './AilockDashboard';
-import { ailockService, type FullAilockProfile, type AilockSkill } from '@/lib/ailock/core';
+import { ailockApi } from '@/lib/ailock/api';
+import type { FullAilockProfile } from '@/lib/ailock/core';
 import { useUserSession } from '@/hooks/useUserSession';
 
 export default function AilockWidget() {
@@ -20,7 +21,7 @@ export default function AilockWidget() {
   const loadProfile = async () => {
     try {
       setLoading(true);
-      const ailockProfile = await ailockService.getOrCreateAilock(currentUser.id);
+      const ailockProfile = await ailockApi.getProfile(currentUser.id);
       setProfile(ailockProfile);
     } catch (error) {
       console.error('Failed to load Ailock profile:', error);
@@ -33,7 +34,7 @@ export default function AilockWidget() {
     if (!profile) return;
     
     try {
-      await ailockService.upgradeSkill(profile.id, skillId);
+      await ailockApi.upgradeSkill(profile.id, skillId);
       await loadProfile(); // Refresh profile
     } catch (error) {
       console.error('Failed to upgrade skill:', error);
@@ -111,7 +112,7 @@ export default function AilockWidget() {
             <div className="text-white/40 text-xs">Chats</div>
           </div>
           <div>
-            <div className="text-purple-400 text-xs font-bold">{profile.skills.filter((s: AilockSkill) => s.currentLevel > 0).length}</div>
+            <div className="text-purple-400 text-xs font-bold">{profile.skills.filter((s) => s.currentLevel > 0).length}</div>
             <div className="text-white/40 text-xs">Skills</div>
           </div>
           <div>

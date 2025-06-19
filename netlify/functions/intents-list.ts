@@ -213,14 +213,18 @@ export const handler: Handler = async (event) => {
   } catch (error) {
     console.error('Intents list error:', error);
     return {
-      statusCode: 500,
+      statusCode: 200,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
       },
-      body: JSON.stringify({ 
-        error: 'Failed to fetch intents',
-        details: error instanceof Error ? error.message : 'Unknown error'
+      body: JSON.stringify({
+        intents: [],
+        location: null,
+        totalCount: 0,
+        searchType: 'fallback',
+        error: 'Database unavailable, returning empty list',
+        timestamp: new Date().toISOString()
       })
     };
   }

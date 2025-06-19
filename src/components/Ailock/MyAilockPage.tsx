@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useUserSession } from '@/hooks/useUserSession';
-import { ailockService, type FullAilockProfile } from '@/lib/ailock/core';
+import { ailockApi } from '@/lib/ailock/api';
+import type { FullAilockProfile } from '@/lib/ailock/core';
 import AilockDashboard from './AilockDashboard';
 
 export default function MyAilockPage() {
@@ -19,7 +20,7 @@ export default function MyAilockPage() {
     try {
       setLoading(true);
       setError(null);
-      const ailockProfile = await ailockService.getOrCreateAilock(currentUser.id);
+      const ailockProfile = await ailockApi.getProfile(currentUser.id);
       setProfile(ailockProfile);
     } catch (err) {
       console.error('Failed to load Ailock profile:', err);
@@ -33,7 +34,7 @@ export default function MyAilockPage() {
     if (!profile) return;
     
     try {
-      await ailockService.upgradeSkill(profile.id, skillId);
+      await ailockApi.upgradeSkill(profile.id, skillId);
       await loadProfile(); // Refresh profile
     } catch (err) {
       console.error('Failed to upgrade skill:', err);
