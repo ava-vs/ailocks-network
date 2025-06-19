@@ -233,75 +233,6 @@ export default function ChatInterface() {
     }
   }, [sessionId]);
 
-  // Analyze message for intent potential
-  const analyzeMessageForIntent = (message: string): boolean => {
-    const intentKeywords = [
-      'design', 'tour', 'collaboration', 'project', 'help', 'looking for', 'need',
-      'seeking', 'require', 'want', 'build', 'create', 'develop', 'work on',
-      'partner', 'team up', 'join', 'opportunity', 'freelance', 'contract'
-    ];
-    
-    const lowerMessage = message.toLowerCase();
-    return intentKeywords.some(keyword => lowerMessage.includes(keyword)) && message.length > 20;
-  };
-
-  // Extract intent data from message
-  const extractIntentData = (message: string): IntentPreviewData => {
-    const lowerMessage = message.toLowerCase();
-    
-    // Specific extraction for tour design message
-    if (lowerMessage.includes('design tours') && lowerMessage.includes('australian')) {
-      return {
-        title: 'Design Tours with Australian Perspective',
-        description: 'Design tours that showcase an Australian perspective on aesthetics and take in the most beautiful places in the city.',
-        category: 'Design',
-        requiredSkills: ['Tour Design', 'Cultural Perspective', 'Aesthetics', 'Local Knowledge', 'Travel Planning'],
-        budget: '$2k-5k',
-        timeline: '2-3 months',
-        priority: 'medium'
-      };
-    }
-    
-    // General extraction logic
-    let category = 'Technology';
-    let skills: string[] = [];
-    let priority = 'medium';
-    
-    if (lowerMessage.includes('design') || lowerMessage.includes('ui') || lowerMessage.includes('ux')) {
-      category = 'Design';
-      skills = ['Design', 'UI/UX', 'Creative'];
-    } else if (lowerMessage.includes('research') || lowerMessage.includes('analysis')) {
-      category = 'Research';
-      skills = ['Research', 'Analysis', 'Data'];
-    } else if (lowerMessage.includes('marketing') || lowerMessage.includes('content')) {
-      category = 'Marketing';
-      skills = ['Marketing', 'Content', 'Strategy'];
-    } else if (lowerMessage.includes('development') || lowerMessage.includes('coding')) {
-      category = 'Technology';
-      skills = ['Development', 'Programming', 'Technical'];
-    }
-    
-    if (lowerMessage.includes('urgent') || lowerMessage.includes('asap')) {
-      priority = 'urgent';
-    } else if (lowerMessage.includes('important') || lowerMessage.includes('priority')) {
-      priority = 'high';
-    }
-    
-    // Extract title from message (first sentence or up to 50 chars)
-    const sentences = message.split(/[.!?]/);
-    const title = sentences[0].length > 50 
-      ? sentences[0].substring(0, 47) + '...'
-      : sentences[0];
-    
-    return {
-      title: title.charAt(0).toUpperCase() + title.slice(1),
-      description: message.length > 100 ? message : `${message} Looking for collaboration and expertise to bring this project to life.`,
-      category,
-      requiredSkills: skills.length > 0 ? skills : ['Collaboration', 'Communication'],
-      priority
-    };
-  };
-
   const sendMessage = async () => {
     if (!input.trim() || isStreaming || !sessionId) return;
 
@@ -326,7 +257,7 @@ export default function ChatInterface() {
       await sendAilockMessage(userMessage);
     } catch (err) {
       console.warn('Ailock request failed, using fallback:', err);
-      await sendFallbackMessage(userMessage);
+      await sendFallbackMessage();
     }
   };
 
@@ -437,7 +368,7 @@ export default function ChatInterface() {
     });
   };
 
-  const sendFallbackMessage = async (userMessage: Message) => {
+  const sendFallbackMessage = async () => {
     setAilockStatus('unavailable');
     
     const assistantMessage: Message = {

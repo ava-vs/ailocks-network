@@ -1,31 +1,25 @@
+import type { Handler, HandlerEvent, HandlerResponse } from '@netlify/functions';
+import { eq } from 'drizzle-orm';
 import { db } from '../../src/lib/db';
-import * as schema from '../../src/lib/schema';
+import { intents, users } from '../../src/lib/schema';
 import { chatService } from '../../src/lib/chat-service';
 import { embeddingService } from '../../src/lib/embedding-service';
 
-export default async (request: Request) => {
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-      status: 405,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
-    });
+export const handler: Handler = async (event: HandlerEvent): Promise<HandlerResponse> => {
+  if (event.httpMethod !== 'POST') {
+    return responseWithCORS(405, { error: 'Method Not Allowed' });
   }
 
   try {
-    const body = await request.text();
-    const { sessionId, userInput, location, language = 'en', intentData, userId } = JSON.parse(body || '{}');
-    
-    if (!sessionId) {
-      return new Response(JSON.stringify({ error: 'Session ID is required' }), {
-        status: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        }
-      });
+    const body = event.body;
+    if (!body) {
+      return responseWithCORS(400, { error: 'Request body is required' });
+    }
+
+    const { sessionId, userInput, location, intentData, userId } = JSON.parse(body);
+
+    if (!sessionId && !userInput && !intentData) {
+      return responseWithCORS(400, { error: 'Either sessionId with userInput, or intentData is required' });
     }
 
     let extractedData;
@@ -67,7 +61,7 @@ export default async (request: Request) => {
     };
 
     // Create intent in database
-    const newIntent = await db.insert(schema.intents).values(intentDataToSave).returning();
+    const newIntent = await db.insert(intents).values(intentDataToSave).returning();
 
     console.log(`✅ Intent created: ${newIntent[0].id} - ${intentDataToSave.title}`);
 
@@ -98,7 +92,7 @@ export default async (request: Request) => {
       await chatService.saveMessage(sessionId, intentCreatedMessage);
     }
 
-    return new Response(JSON.stringify({
+    return responseWithCORS(201, {
       intent: newIntent[0],
       message: 'Intent created successfully',
       extractedData: intentDataToSave,
@@ -106,25 +100,13 @@ export default async (request: Request) => {
         embeddingEnabled: !!process.env.OPENAI_API_KEY,
         semanticSearch: !!process.env.OPENAI_API_KEY
       }
-    }), {
-      status: 201,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
     });
 
   } catch (error) {
     console.error('Intent creation error:', error);
-    return new Response(JSON.stringify({ 
+    return responseWithCORS(500, { 
       error: 'Failed to create intent',
       details: error instanceof Error ? error.message : 'Unknown error'
-    }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      }
     });
   }
 };
@@ -210,4 +192,15 @@ function validateCategory(category: string): string | null {
 function validatePriority(priority: string): string | null {
   const validPriorities = ['low', 'medium', 'high', 'urgent'];
   return validPriorities.includes(priority) ? priority : null;
+}
+
+function responseWithCORS(status: number, body: any) {
+  return {
+    statusCode: status,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*'
+    },
+    body: JSON.stringify(body)
+  };
 }

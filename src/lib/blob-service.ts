@@ -155,22 +155,23 @@ export class ChatBlobService {
 
   async cleanupOldSessions(maxAgeHours: number = 24): Promise<number> {
     try {
-      const store = this.getStoreInstance();
-      const sessions = await this.listSessions();
-      const cutoffTime = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000);
-      let deletedCount = 0;
-
-      for (const sessionId of sessions) {
+      const cutoffDate = new Date(Date.now() - maxAgeHours * 60 * 60 * 1000);
+      
+      // List all sessions to check their age
+      const sessionKeys = await this.listSessions();
+      let cleanedCount = 0;
+      
+      for (const sessionId of sessionKeys) {
         const context = await this.getContext(sessionId);
-        if (context && context.metadata.lastActivity < cutoffTime) {
+        if (context && context.metadata.lastActivity < cutoffDate) {
           await this.deleteContext(sessionId);
-          deletedCount++;
+          cleanedCount++;
         }
       }
-
-      return deletedCount;
+      
+      return cleanedCount;
     } catch (error) {
-      console.error('Failed to cleanup old sessions:', error);
+      console.error('Error cleaning up old sessions:', error);
       return 0;
     }
   }

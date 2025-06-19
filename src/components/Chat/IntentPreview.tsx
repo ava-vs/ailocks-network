@@ -1,7 +1,8 @@
-import React from 'react';
 import { Target, MapPin, Clock, DollarSign, X, Check } from 'lucide-react';
 import { useStore } from '@nanostores/react';
 import { currentLanguage } from '../../lib/store';
+import { useI18n } from '../../hooks/useI18n';
+import { useLocation } from '../../hooks/useLocation';
 
 interface IntentPreviewProps {
   title: string;

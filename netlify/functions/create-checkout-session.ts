@@ -13,20 +13,30 @@ export const handler: Handler = async (event) => {
   }
 
   try {
-    const { planId, email, successUrl, cancelUrl } = JSON.parse(event.body || '{}');
+    const { planId, email } = JSON.parse(event.body || '{}');
 
-    // Check if Stripe is configured
-    if (!process.env.STRIPE_SECRET_KEY) {
+    if (!planId || !email) {
       return {
         statusCode: 400,
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*'
         },
+        body: JSON.stringify({ error: 'planId and email are required' })
+      };
+    }
+
+    // Check if Stripe is configured
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return {
+        statusCode: 503,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        },
         body: JSON.stringify({ 
-          error: 'Stripe not configured',
-          message: 'Please configure STRIPE_SECRET_KEY environment variable',
-          setupUrl: 'https://bolt.new/setup/stripe'
+          error: 'Stripe is not configured. Contact administrator.',
+          redirect: false 
         })
       };
     }
@@ -34,7 +44,7 @@ export const handler: Handler = async (event) => {
     // Initialize Stripe (you'll need to install stripe package)
     // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
-    // For now, return a mock response since Stripe isn't configured
+    // For now, just return a mock response since Stripe isn't fully configured
     return {
       statusCode: 200,
       headers: {
@@ -42,16 +52,10 @@ export const handler: Handler = async (event) => {
         'Access-Control-Allow-Origin': '*'
       },
       body: JSON.stringify({
-        message: 'Stripe integration required',
-        setupInstructions: {
-          step1: 'Install Stripe: npm install stripe',
-          step2: 'Configure STRIPE_SECRET_KEY in environment variables',
-          step3: 'Create products and prices in Stripe Dashboard',
-          step4: 'Update this function to create checkout sessions'
-        },
-        mockCheckoutUrl: 'https://checkout.stripe.com/mock-session',
-        planId,
-        email
+        success: true,
+        message: 'Stripe integration is in development. You will be redirected to a demo success page.',
+        redirect: true,
+        url: '/success?demo=true'
       })
     };
 
@@ -85,16 +89,16 @@ export const handler: Handler = async (event) => {
     */
 
   } catch (error) {
-    console.error('Checkout session creation error:', error);
+    console.error('Error creating checkout session:', error);
     return {
       statusCode: 500,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
       },
-      body: JSON.stringify({
+      body: JSON.stringify({ 
         error: 'Failed to create checkout session',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        redirect: false 
       })
     };
   }

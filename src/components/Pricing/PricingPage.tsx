@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Check, Crown, Zap, Star, Users, Database, Brain, Shield, Sparkles, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Check, Crown, Zap, Star, Database, Brain, Sparkles, X } from 'lucide-react';
 import { useStore } from '@nanostores/react';
 import { currentLanguage, isClientInitialized } from '../../lib/store';
 import Header from '../Header';

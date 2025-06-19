@@ -105,7 +105,7 @@ export default async (request: Request) => {
 
     if (streaming) {
       // Server-Sent Events streaming response
-      const streamBody = await streamAilockResponse(message, session, mode, language, location, sessionId, useDatabase);
+      const streamBody = await streamAilockResponse(message, mode, language, location, sessionId, useDatabase);
       return new Response(streamBody, {
         status: 200,
         headers: {
@@ -120,7 +120,7 @@ export default async (request: Request) => {
     } else {
       // Non-streaming response for compatibility
       try {
-        const ailockResponse = await processAilockRequest(message, session, mode, language, location);
+        const ailockResponse = await processAilockRequest(message, mode, language, location);
 
         // Create assistant message
         const assistantMessage = {
@@ -209,7 +209,6 @@ export default async (request: Request) => {
 
 async function processAilockRequest(
   userMessage: string, 
-  session: any, 
   mode: string, 
   language: string, 
   location: any
@@ -224,7 +223,7 @@ async function processAilockRequest(
   // 3. Generate Ailock response based on findings
   if (relevantIntents.length > 0) {
     // Found relevant intents - present them as cards
-    const response = generateIntentBasedResponse(userMessage, relevantIntents, mode, language);
+    const response = generateIntentBasedResponse(userMessage, relevantIntents, language);
     return {
       content: response.content,
       intents: relevantIntents,
@@ -232,7 +231,7 @@ async function processAilockRequest(
     };
   } else {
     // No intents found - suggest creating or searching
-    const response = generateNoIntentsResponse(userMessage, userIntent, mode, language, location);
+    const response = generateNoIntentsResponse(language);
     return {
       content: response.content,
       intents: [],
@@ -243,7 +242,6 @@ async function processAilockRequest(
 
 async function streamAilockResponse(
   userMessage: string,
-  session: any,
   mode: string,
   language: string,
   location: any,
@@ -255,7 +253,7 @@ async function streamAilockResponse(
 
   try {
     // Process Ailock request
-    const ailockResponse = await processAilockRequest(userMessage, session, mode, language, location);
+    const ailockResponse = await processAilockRequest(userMessage, mode, language, location);
     
     // Stream the response content
     const content = ailockResponse.content;
@@ -414,7 +412,7 @@ async function searchRelevantIntents(userMessage: string, location: any, userInt
   }
 }
 
-function generateIntentBasedResponse(userMessage: string, intents: any[], mode: string, language: string): any {
+function generateIntentBasedResponse(userMessage: string, intents: any[], language: string): any {
   const texts = {
     en: {
       found: `I found ${intents.length} relevant opportunities for you:`,
@@ -471,7 +469,7 @@ function generateIntentBasedResponse(userMessage: string, intents: any[], mode: 
   return { content, actions };
 }
 
-function generateNoIntentsResponse(userMessage: string, userIntent: any, mode: string, language: string, location: any): any {
+function generateNoIntentsResponse(language: string): any {
   const texts = {
     en: {
       noResults: "I couldn't find any existing opportunities that match your request in your area.",

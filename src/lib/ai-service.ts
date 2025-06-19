@@ -26,8 +26,6 @@ export class UnifiedAIService {
   private openai: OpenAI | null = null;
   private anthropic: Anthropic | null = null;
   private openrouter: OpenAI | null = null;
-  private errorCounts = new Map<string, number>();
-  private lastErrors = new Map<string, number>();
 
   constructor() {
     // Initialize OpenAI if API key is available
@@ -54,7 +52,7 @@ export class UnifiedAIService {
   }
 
   selectModel(options: AIOptions): ModelConfig {
-    const { complexity, budget, mode } = options;
+    const { complexity, mode } = options;
 
     // ALWAYS START WITH FREE MODEL (90% of requests should use this)
     const freeModel: ModelConfig = {
