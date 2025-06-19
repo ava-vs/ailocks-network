@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import ForceGraph2D, { type NodeObject, type LinkObject } from 'react-force-graph-2d';
+import type { NodeObject, LinkObject } from 'react-force-graph-2d';
 import { SKILL_TREE, BRANCH_COLORS, canUnlockSkill } from '@/lib/ailock/skills';
 import type { AilockSkill } from '@/lib/ailock/core';
 
@@ -24,6 +24,21 @@ interface SkillNode extends NodeObject {
 export default function SkillTreeCanvas({ skills, skillPoints, onSkillUpgrade, onSkillHover }: SkillTreeCanvasProps) {
   const fgRef = useRef<any>();
   const [hoveredNode, setHoveredNode] = useState<SkillNode | null>(null);
+  const [ForceGraph2D, setForceGraph2D] = useState<any>(null);
+
+  // Dynamically import ForceGraph2D only on client side
+  useEffect(() => {
+    const loadForceGraph = async () => {
+      try {
+        const module = await import('react-force-graph-2d');
+        setForceGraph2D(() => module.default);
+      } catch (error) {
+        console.error('Failed to load ForceGraph2D:', error);
+      }
+    };
+
+    loadForceGraph();
+  }, []);
 
   const graphData = useMemo(() => {
     const nodes: SkillNode[] = [];
@@ -61,12 +76,12 @@ export default function SkillTreeCanvas({ skills, skillPoints, onSkillUpgrade, o
   }, [skills, skillPoints]);
 
   useEffect(() => {
-    if (fgRef.current) {
+    if (fgRef.current && ForceGraph2D) {
       fgRef.current.d3Force('charge').strength(-1200);
       fgRef.current.d3Force('link').distance(150);
       fgRef.current.d3Force('center', fgRef.current.d3Force.center());
     }
-  }, []);
+  }, [ForceGraph2D]);
   
   const handleNodeClick = (node: NodeObject) => {
     const skillNode = node as SkillNode;
@@ -154,6 +169,15 @@ export default function SkillTreeCanvas({ skills, skillPoints, onSkillUpgrade, o
     ctx.lineWidth = targetNode.unlocked ? 1.5 : 0.5;
     ctx.stroke();
   };
+
+  // Show loading state while ForceGraph2D is being loaded
+  if (!ForceGraph2D) {
+    return (
+      <div className="bg-slate-900/50 rounded-xl p-4 border border-white/10 w-full h-[600px] flex items-center justify-center">
+        <div className="text-white/60">Loading skill tree...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-slate-900/50 rounded-xl p-4 border border-white/10 w-full h-[600px]">
