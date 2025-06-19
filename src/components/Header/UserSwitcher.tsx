@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { User, RefreshCw } from 'lucide-react';
 import { useUserSession } from '../../hooks/useUserSession';
 import { useStore } from '@nanostores/react';

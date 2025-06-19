@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Crown, Loader2, CreditCard, Shield, X } from 'lucide-react';
+import { Crown, Loader2, CreditCard, Shield } from 'lucide-react';
 
 interface StripeCheckoutProps {
   planId: string;

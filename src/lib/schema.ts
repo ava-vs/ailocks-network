@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, integer, boolean, vector } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, integer, boolean, vector, jsonb } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -100,14 +100,14 @@ export const ailocks = pgTable('ailocks', {
   xp: integer('xp').default(0),
   skillPoints: integer('skill_points').default(0),
   // Characteristics
+  velocity: integer('velocity').default(10),
   insight: integer('insight').default(10),
   efficiency: integer('efficiency').default(10),
-  creativity: integer('creativity').default(10),
-  collaboration: integer('collaboration').default(10),
+  economy: integer('economy').default(10),
+  convenience: integer('convenience').default(10),
   // Personality & Avatar
-  avatar: varchar('avatar', { length: 50 }).default('robot'), // robot, analyst, strategist, master, singularity
-  personality: varchar('personality', { length: 100 }).default('helpful'),
-  // Progress tracking
+  avatarPreset: varchar('avatar_preset', { length: 50 }).default('robot'),
+  // Progress tracking (can be deprecated if derived from history)
   totalIntentsCreated: integer('total_intents_created').default(0),
   totalChatMessages: integer('total_chat_messages').default(0),
   totalSkillsUsed: integer('total_skills_used').default(0),
@@ -119,12 +119,12 @@ export const ailocks = pgTable('ailocks', {
 export const ailockSkills = pgTable('ailock_skills', {
   id: uuid('id').defaultRandom().primaryKey(),
   ailockId: uuid('ailock_id').references(() => ailocks.id).notNull(),
-  skillId: varchar('skill_id', { length: 100 }).notNull(), // deep_research, predictive_matching, visual_idea_board, etc.
+  skillId: varchar('skill_id', { length: 100 }).notNull(),
   skillName: varchar('skill_name', { length: 255 }).notNull(),
-  skillLevel: integer('skill_level').default(1),
-  skillBranch: varchar('skill_branch', { length: 50 }).notNull(), // research, collaboration, convenience
-  isUnlocked: boolean('is_unlocked').default(false),
-  timesUsed: integer('times_used').default(0),
+  currentLevel: integer('current_level').default(0),
+  branch: varchar('branch', { length: 50 }).notNull(),
+  usageCount: integer('usage_count').default(0),
+  successRate: integer('success_rate').default(100), // percentage
   lastUsedAt: timestamp('last_used_at'),
   unlockedAt: timestamp('unlocked_at'),
   createdAt: timestamp('created_at').defaultNow(),
@@ -134,21 +134,21 @@ export const ailockSkills = pgTable('ailock_skills', {
 export const ailockXpHistory = pgTable('ailock_xp_history', {
   id: uuid('id').defaultRandom().primaryKey(),
   ailockId: uuid('ailock_id').references(() => ailocks.id).notNull(),
-  eventType: varchar('event_type', { length: 100 }).notNull(), // intent_created, chat_message, skill_used, achievement_unlocked
+  eventType: varchar('event_type', { length: 100 }).notNull(),
   xpGained: integer('xp_gained').notNull(),
-  context: text('context'), // JSON context about the event
-  description: text('description'), // Human-readable description
+  context: jsonb('context'),
+  description: text('description'),
   createdAt: timestamp('created_at').defaultNow()
 });
 
 export const ailockAchievements = pgTable('ailock_achievements', {
   id: uuid('id').defaultRandom().primaryKey(),
   ailockId: uuid('ailock_id').references(() => ailocks.id).notNull(),
-  achievementId: varchar('achievement_id', { length: 100 }).notNull(), // first_intent, chat_master, skill_collector
-  achievementName: varchar('achievement_name', { length: 255 }).notNull(),
+  achievementId: varchar('achievement_id', { length: 100 }).notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
   description: text('description'),
-  iconUrl: varchar('icon_url', { length: 500 }),
-  rarity: varchar('rarity', { length: 20 }).default('common'), // common, rare, epic, legendary
+  icon: varchar('icon', { length: 500 }),
+  rarity: varchar('rarity', { length: 20 }).default('common'),
   unlockedAt: timestamp('unlocked_at').defaultNow(),
   createdAt: timestamp('created_at').defaultNow()
 });

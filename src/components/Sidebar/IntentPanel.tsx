@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Clock, Users, Zap, Star, Calendar, Filter, Database, AlertCircle, Crown } from 'lucide-react';
+import { MapPin, Clock, Users, Zap, Star, Calendar, Filter, Database, AlertCircle, Crown, Bot } from 'lucide-react';
 import { useStore } from '@nanostores/react';
 import { currentLanguage, userLocation } from '../../lib/store';
 import { useUserSession } from '../../hooks/useUserSession';
+import AilockWidget from '../Ailock/AilockWidget';
 
 interface Intent {
   id: string;
@@ -304,7 +305,8 @@ export default function IntentPanel() {
         realData: 'Live Database',
         mockData: 'Demo Data',
         errorData: 'Offline Mode',
-        createdByYou: 'Created by you'
+        createdByYou: 'Created by you',
+        myAilock: 'My Ailock'      
       },
       ru: {
         location: 'Ваше местоположение',
@@ -330,7 +332,8 @@ export default function IntentPanel() {
         realData: 'Живая база данных',
         mockData: 'Демо данные',
         errorData: 'Офлайн режим',
-        createdByYou: 'Создано вами'
+        createdByYou: 'Создано вами',
+        myAilock: 'Мой Ailock'
       }
     };
     return texts[language as keyof typeof texts] || texts.en;
@@ -362,6 +365,15 @@ export default function IntentPanel() {
 
   return (
     <div className="w-80 bg-gradient-to-b from-slate-900/95 to-slate-800/95 backdrop-blur-xl border-l border-white/10 flex flex-col h-full flex-shrink-0">
+      {/* Ailock Widget */}
+        <div className="flex-shrink-0 p-6 border-b border-white/10">
+          <div className="flex items-center space-x-2 text-white mb-4">
+            <Bot className="w-5 h-5 text-purple-400" />
+            <span className="font-medium">{texts.myAilock}</span>
+          </div>
+        <AilockWidget />
+      </div>
+      
       {/* Location Header */}
       <div className="flex-shrink-0 p-6 border-b border-white/10">
         <div className="flex items-center space-x-3 text-white mb-3">
