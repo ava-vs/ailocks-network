@@ -1,11 +1,14 @@
-import type { Handler, HandlerEvent, HandlerResponse } from '@netlify/functions';
-import { eq } from 'drizzle-orm';
 import { db } from '../../src/lib/db';
-import { intents, users } from '../../src/lib/schema';
-import { chatService } from '../../src/lib/chat-service';
+import { intents } from '../../src/lib/schema';
 import { embeddingService } from '../../src/lib/embedding-service';
+import type { Handler, HandlerEvent, HandlerResponse } from '@netlify/functions';
+import { chatService } from '../../src/lib/chat-service';
 
 export const handler: Handler = async (event: HandlerEvent): Promise<HandlerResponse> => {
+  if (event.httpMethod === 'OPTIONS') {
+    return responseWithCORS(200, { message: 'Preflight request processed' });
+  }
+
   if (event.httpMethod !== 'POST') {
     return responseWithCORS(405, { error: 'Method Not Allowed' });
   }
@@ -71,7 +74,7 @@ export const handler: Handler = async (event: HandlerEvent): Promise<HandlerResp
         .then(() => {
           console.log(`✅ Embedding generated for intent: ${newIntent[0].id}`);
         })
-        .catch((error) => {
+        .catch((error: any) => {
           console.warn(`⚠️ Failed to generate embedding for intent ${newIntent[0].id}:`, error);
         });
     } else {

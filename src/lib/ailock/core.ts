@@ -1,5 +1,5 @@
 import { db } from '../db';
-import { ailocks, ailockSkills, ailockXpHistory, ailockAchievements } from '../schema';
+import { ailocks, ailockSkills, ailockXpHistory, ailockAchievements, intents, chatSessions } from '../schema';
 import { eq, desc, count } from 'drizzle-orm';
 import { SKILL_TREE, canUnlockSkill } from './skills';
 
@@ -22,6 +22,9 @@ export interface AilockProfile {
   lastActiveAt: Date;
   createdAt: Date;
   updatedAt: Date;
+  totalIntentsCreated: number;
+  totalChatMessages: number;
+  totalSkillsUsed: number;
 }
 
 // Skill record from 'ailock_skills' table
@@ -116,69 +119,76 @@ export class AilockService {
     };
   }
 
-  private async findOrCreateBaseProfile(userId: string): Promise<AilockProfile> {
-    const existing = await db.select().from(ailocks).where(eq(ailocks.userId, userId)).limit(1);
+  private async mapToAilockProfile(dbObject: any): Promise<AilockProfile> {
+    return {
+      id: dbObject.id,
+      userId: dbObject.userId,
+      name: dbObject.name,
+      level: dbObject.level,
+      xp: dbObject.xp,
+      skillPoints: dbObject.skillPoints,
+      avatarPreset: dbObject.avatarPreset,
+      characteristics: {
+        velocity: dbObject.velocity,
+        insight: dbObject.insight,
+        efficiency: dbObject.efficiency,
+        economy: dbObject.economy,
+        convenience: dbObject.convenience,
+      },
+      lastActiveAt: dbObject.lastActiveAt,
+      createdAt: dbObject.createdAt,
+      updatedAt: dbObject.updatedAt,
+      totalIntentsCreated: dbObject.totalIntentsCreated,
+      totalChatMessages: dbObject.totalChatMessages,
+      totalSkillsUsed: dbObject.totalSkillsUsed,
+    };
+  }
 
-    if (existing.length > 0) {
-      const ailock = existing[0];
-      return {
-        id: ailock.id,
-        userId: ailock.userId,
-        name: ailock.name || 'Ailock',
-        level: ailock.level || 1,
-        xp: ailock.xp || 0,
-        skillPoints: ailock.skillPoints || 0,
-        avatarPreset: ailock.avatarPreset || 'robot',
-        characteristics: {
-          velocity: ailock.velocity || 10,
-          insight: ailock.insight || 10,
-          efficiency: ailock.efficiency || 10,
-          economy: ailock.economy || 10,
-          convenience: ailock.convenience || 10
-        },
-        lastActiveAt: ailock.lastActiveAt || new Date(),
-        createdAt: ailock.createdAt || new Date(),
-        updatedAt: ailock.updatedAt || new Date(),
-      };
+  private async findOrCreateBaseProfile(userId: string): Promise<AilockProfile> {
+    if (!db) {
+      console.error('Database client (db) is not initialized in ailockService.');
+      throw new Error('Database connection is not available.');
     }
 
-    // Create a new Ailock profile
-    const newAilocks = await db.insert(ailocks).values({
-      userId,
-      name: 'Ailock',
-      level: 1,
-      xp: 0,
-      skillPoints: 1,
-      avatarPreset: 'robot',
-      velocity: 10,
-      insight: 10,
-      efficiency: 10,
-      economy: 10,
-      convenience: 10,
-      lastActiveAt: new Date(),
-    }).returning();
+    console.log(`[AilockService] Attempting to find profile for userId: ${userId} using Drizzle ORM.`);
     
-    const newAilock = newAilocks[0];
+    try {
+      const existingProfiles = await db.select()
+        .from(ailocks)
+        .where(eq(ailocks.userId, userId))
+        .limit(1);
 
-    return {
-      id: newAilock.id,
-      userId: newAilock.userId,
-      name: newAilock.name || 'Ailock',
-      level: newAilock.level || 1,
-      xp: newAilock.xp || 0,
-      skillPoints: newAilock.skillPoints || 0,
-      avatarPreset: newAilock.avatarPreset || 'robot',
-      characteristics: {
-        velocity: newAilock.velocity || 10,
-        insight: newAilock.insight || 10,
-        efficiency: newAilock.efficiency || 10,
-        economy: newAilock.economy || 10,
-        convenience: newAilock.convenience || 10
-      },
-      lastActiveAt: newAilock.lastActiveAt || new Date(),
-      createdAt: newAilock.createdAt || new Date(),
-      updatedAt: newAilock.updatedAt || new Date(),
-    };
+      const existingProfileData = existingProfiles.length > 0 ? existingProfiles[0] : null;
+
+      if (existingProfileData) {
+        console.log(`[AilockService] Found existing profile for userId: ${userId}`);
+        return this.mapToAilockProfile(existingProfileData);
+      }
+
+      console.log(`[AilockService] No profile found. Creating new one for userId: ${userId}`);
+      
+      const newAilocks = await db.insert(ailocks).values({
+        userId: userId,
+        name: 'Ailock',
+      }).returning();
+
+      if (!newAilocks || newAilocks.length === 0) {
+        throw new Error('Failed to create new Ailock profile.');
+      }
+      
+      const newProfileData = newAilocks[0];
+      console.log('[AilockService] Successfully created new profile:', newProfileData);
+      return this.mapToAilockProfile(newProfileData);
+
+    } catch (e) {
+      console.error(`[AilockService] Database query failed for userId: ${userId}. Error object:`, JSON.stringify(e, null, 2));
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      // Add more context to the error message
+      if (errorMessage.includes('relation "ailocks" does not exist')) {
+         throw new Error(`Database query failed. Drizzle might be generating incorrect SQL for the 'ailocks' table with the neon-http driver. Check table name and schema. Original error: ${errorMessage}`);
+      }
+      throw new Error(`Database query failed. Details: ${errorMessage}`);
+    }
   }
 
   async gainXp(ailockId: string, eventType: XpEventType, context: Record<string, any> = {}) {
@@ -220,7 +230,7 @@ export class AilockService {
     });
     
     // TODO: Achievement check
-    const achievementsUnlocked = await this.checkAchievements(ailockId, eventType);
+    const achievementsUnlocked = await this.checkAchievements(ailockId);
 
     return {
       success: true,
@@ -325,17 +335,15 @@ export class AilockService {
   }
   
   private async countInteractions(ailockId: string): Promise<number> {
-    // This is a simplified count. A real implementation might be more complex.
-    const result = await db
-      .select({ value: count() })
-      .from(ailockXpHistory)
-      .where(eq(ailockXpHistory.ailockId, ailockId));
-      
-    return result[0]?.value ?? 0;
+    const totalIntents = await db.select({ value: count() }).from(intents).where(eq(intents.userId, ailockId));
+    const totalMessages = await db.select({ value: count() }).from(chatSessions).where(eq(chatSessions.userId, ailockId));
+    return (totalIntents[0]?.value || 0) + (totalMessages[0]?.value || 0);
   }
   
-  private async checkAchievements(ailockId: string, eventType: XpEventType): Promise<AilockAchievement[]> {
-    // Placeholder for achievement logic
+  private async checkAchievements(ailockId: string): Promise<AilockAchievement[]> {
+    // TODO: Implement achievement checking logic based on events and profile stats
+    // For now, returning an empty array.
+    // Example: Check if user created 10 intents, unlocked a skill branch, etc.
     return [];
   }
 }

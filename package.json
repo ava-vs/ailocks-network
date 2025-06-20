@@ -21,7 +21,10 @@
     "check:env": "node scripts/check-env.cjs",
     "test:db": "curl http://localhost:8888/.netlify/functions/db-status || curl http://localhost:4321/.netlify/functions/db-status",
     "test:intents": "curl http://localhost:8888/.netlify/functions/intents-list || curl http://localhost:4321/.netlify/functions/intents-list",
-    "test:embeddings": "curl http://localhost:8888/.netlify/functions/embedding-health || curl http://localhost:4321/.netlify/functions/embedding-health"
+    "test:embeddings": "curl http://localhost:8888/.netlify/functions/embedding-health || curl http://localhost:4321/.netlify/functions/embedding-health",
+    "seed": "npm-run-all --parallel seed:*",
+    "seed:db": "node ./scripts/seed-db.cjs",
+    "seed:demo": "node ./scripts/seed-demo.cjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",
@@ -38,23 +41,30 @@
     "@tailwindcss/forms": "^0.5.10",
     "astro": "^5.9.2",
     "drizzle-orm": "^0.44.2",
-    "lucide-react": "^0.344.0",
+    "lucide-react": "^0.460.0",
     "nanostores": "^0.10.3",
     "openai": "^5.3.0",
-    "pgvector": "^0.2.0",
-    "react": "^18.3.1",
+    "pgvector": "^0.2.1",
+    "postgres": "^3.4.4",
+    "react": "^19.1.0",
     "react-confetti": "^6.4.0",
-    "react-dom": "^18.3.1",
+    "react-dom": "^19.1.0",
     "react-force-graph-2d": "^1.27.1",
-    "tailwindcss": "^3.4.13",
-    "typescript": "^5.6.3"
+    "react-hot-toast": "^2.5.2",
+    "tailwindcss": "^3.4.6",
+    "typescript": "^5.5.3"
+  },
+  "overrides": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",
     "@types/pg": "^8.15.4",
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18.3.0",
-    "dotenv": "^16.3.1",
-    "drizzle-kit": "^0.31.1"
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "dotenv": "^16.4.5",
+    "drizzle-kit": "^0.31.1",
+    "npm-run-all": "^4.1.5"
   }
 }

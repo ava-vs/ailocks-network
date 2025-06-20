@@ -1,124 +1,39 @@
+import { UnifiedAIService } from '../../src/lib/ai-service';
 import type { Handler } from '@netlify/functions';
-import { aiService } from '../../src/lib/ai-service';
 
-export const handler: Handler = async (event) => {
-  if (event.httpMethod !== 'GET') {
-    return {
-      statusCode: 405,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      },
-      body: JSON.stringify({ error: 'Method Not Allowed' })
-    };
-  }
+export const handler: Handler = async () => {
+  const aiService = new UnifiedAIService();
 
   try {
-    // 1. Проверить состояние всех AI-провайдеров
     const health = await aiService.healthCheck();
-    const isAnyProviderAvailable = health.providers && health.providers.length > 0;
-
-    // 2. Если НИ ОДИН провайдер не отвечает - вернуть ошибку
-    if (!isAnyProviderAvailable) {
-      return {
-        statusCode: 503, // Service Unavailable
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-          status: 'error',
-          message: 'Все AI сервисы недоступны. Проверьте API ключи в Netlify.',
-          details: health.providers,
-          environment: {
-            OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
-            ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
-            OPENROUTER_API_KEY: !!process.env.OPENROUTER_API_KEY
-          },
-          timestamp: new Date().toISOString()
-        })
-      };
-    }
     
-    // 3. Сделать быстрый тестовый звонок к самому дешевому провайдеру
-    let testResponse = null;
-    let testError = null;
-    
-    try {
-      // Используем timeout для предотвращения долгого ожидания
-      const testPromise = aiService.generateResponse(
-        [{ role: 'user', content: 'Health check' }],
-        { complexity: 'simple', budget: 'free' } // Гарантирует использование OpenRouter
-      );
-      
-      // Timeout через 8 секунд чтобы не превысить лимит Netlify
-      testResponse = await Promise.race([
-        testPromise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 8000))
-      ]);
-    } catch (error) {
-      testError = error instanceof Error ? error.message : 'Unknown error';
-      console.error('AI test call failed:', error);
-    }
+    // Perform a simple test query
+    const testResponse = await aiService.generateWithCostOptimization(
+        [{ role: 'user', content: 'Hello' }],
+        { complexity: 'simple', budget: 'free' }
+    );
 
-    if (testResponse) {
-      return {
-        statusCode: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-          status: 'healthy',
-          message: 'Как минимум один AI провайдер работает.',
-          details: health.providers,
-          testCallSuccess: true,
-          testMessage: testResponse,
-          environment: {
-            OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
-            ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
-            OPENROUTER_API_KEY: !!process.env.OPENROUTER_API_KEY
-          },
-          timestamp: new Date().toISOString()
-        })
-      };
-    } else {
-      // 4. Если даже тестовый звонок не прошел - сообщить об этом
-      return {
-        statusCode: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({
-          status: 'error',
-          message: 'Тестовый вызов AI провалился. Проверьте конфигурацию OpenRouter.',
-          error: testError,
-          details: health.providers,
-          testCallSuccess: false,
-          environment: {
-            OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
-            ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
-            OPENROUTER_API_KEY: !!process.env.OPENROUTER_API_KEY
-          },
-          timestamp: new Date().toISOString()
-        })
-      };
-    }
+    const isHealthy = health.status === 'ok' && testResponse.length > 0;
 
-  } catch (error) {
-    console.error('AI health check error:', error);
+    return {
+      statusCode: isHealthy ? 200 : 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: isHealthy ? 'ok' : 'error',
+        aiService: health,
+        testResponse: testResponse.length > 0 ? 'success' : 'failed'
+      }),
+    };
+  } catch (error: any) {
+    console.error('AI Health Check failed:', error);
     return {
       statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         status: 'error',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
-      })
+        message: 'An error occurred during the health check.',
+        error: error.message,
+      }),
     };
   }
 };

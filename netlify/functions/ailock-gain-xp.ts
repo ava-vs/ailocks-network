@@ -1,5 +1,5 @@
 import type { Handler } from '@netlify/functions';
-import { ailockService } from '../../../src/lib/ailock/core';
+import { ailockService } from '../../src/lib/ailock/core';
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -40,34 +40,31 @@ export const handler: Handler = async (event) => {
       };
     }
 
-    const { ailockId, skillId } = JSON.parse(body);
+    const { ailockId, eventType, context = {} } = JSON.parse(body);
 
-    if (!ailockId || !skillId) {
+    if (!ailockId || !eventType) {
       return {
         statusCode: 400,
         headers: jsonHeaders,
-        body: JSON.stringify({ error: 'Ailock ID and skill ID are required' })
+        body: JSON.stringify({ error: 'Ailock ID and event type are required' })
       };
     }
 
-    const success = await ailockService.upgradeSkill(ailockId, skillId);
+    const result = await ailockService.gainXp(ailockId, eventType, context);
 
     return {
       statusCode: 200,
       headers: jsonHeaders,
-      body: JSON.stringify({
-        success,
-        message: success ? 'Skill upgraded successfully' : 'Failed to upgrade skill'
-      })
+      body: JSON.stringify(result)
     };
 
   } catch (error) {
-    console.error('Ailock upgrade skill error:', error);
+    console.error('Ailock gain XP error:', error);
     return {
       statusCode: 500,
       headers: jsonHeaders,
       body: JSON.stringify({
-        error: 'Failed to upgrade skill',
+        error: 'Failed to gain XP',
         details: error instanceof Error ? error.message : 'Unknown error'
       })
     };

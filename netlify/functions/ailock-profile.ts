@@ -1,5 +1,5 @@
 import type { Handler } from '@netlify/functions';
-import { ailockService } from '../../../src/lib/ailock/core';
+import { AilockService } from '../../src/lib/ailock/core';
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -42,11 +42,15 @@ export const handler: Handler = async (event) => {
       };
     }
 
+    const ailockService = new AilockService();
     const profile = await ailockService.getOrCreateAilock(userId);
 
     return {
       statusCode: 200,
-      headers: jsonHeaders,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*", // For local development
+      },
       body: JSON.stringify({
         success: true,
         profile

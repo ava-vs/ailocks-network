@@ -1,11 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Mic, Bot, AlertCircle, Wifi, WifiOff, Eye, MessageCircle, Copy, Plus, MapPin, TrendingUp, Users } from 'lucide-react';
+import { Send, Paperclip, Mic, Bot, AlertCircle, Wifi, WifiOff, Eye, MessageCircle, Copy, Plus, MapPin, TrendingUp, Users, CheckCircle, XCircle, Loader, ArrowRight, BrainCircuit, Search, DraftingCompass } from 'lucide-react';
 import { useStore } from '@nanostores/react';
 import { currentMode, currentLanguage, userLocation } from '../../lib/store';
 import { useUserSession } from '../../hooks/useUserSession';
 import MessageBubble from './MessageBubble';
 import ContextActions from './ContextActions';
 import IntentPreview from './IntentPreview';
+import { getProfile, gainXp } from '../../lib/ailock/api';
+import type { FullAilockProfile } from '../../lib/ailock/core';
+import LevelUpModal from '../Ailock/LevelUpModal';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Message {
   id: string;
@@ -52,7 +56,7 @@ export default function ChatInterface() {
   const mode = useStore(currentMode);
   const language = useStore(currentLanguage);
   const location = useStore(userLocation);
-  const { currentUser } = useUserSession();
+  const { currentUser, demoUsers } = useUserSession();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -71,6 +75,9 @@ export default function ChatInterface() {
   const [foundIntents, setFoundIntents] = useState<IntentCard[]>([]);
   const [chatHistoryLoaded, setChatHistoryLoaded] = useState(false);
   const [demoUsersSeeded, setDemoUsersSeeded] = useState(false);
+  const [ailockProfile, setAilockProfile] = useState<FullAilockProfile | null>(null);
+  const [levelUpInfo, setLevelUpInfo] = useState<{ newLevel: number, skillPointsGained: number, xpGained: number } | null>(null);
+  const [isLevelUpModalOpen, setIsLevelUpModalOpen] = useState(false);
   
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -86,28 +93,38 @@ export default function ChatInterface() {
   // Seed demo users on component mount
   useEffect(() => {
     const seedDemoUsers = async () => {
-      try {
-        console.log('🌱 Seeding demo users...');
-        const response = await fetch('/.netlify/functions/seed-demo-users', {
-          method: 'POST'
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('✅ Demo users seeded:', data);
-          setDemoUsersSeeded(true);
-        } else {
-          console.warn('⚠️ Failed to seed demo users:', response.status);
-          setDemoUsersSeeded(true); // Continue anyway
+      if (demoUsers.lirea && demoUsers.marco) {
+        try {
+          console.log('🌱 Seeding demo users...');
+          const response = await fetch('/.netlify/functions/seed-demo-users', {
+            method: 'POST',
+            body: JSON.stringify({ success: true, users: [demoUsers.lirea, demoUsers.marco] }),
+          });
+          
+          if (response.ok) {
+            await response.json();
+            console.log('✅ Demo users seeded successfully.');
+            setDemoUsersSeeded(true);
+          } else {
+            let errorMsg = `Request failed with status: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                errorMsg = errorData.error || errorMsg;
+            } catch (jsonError) {
+                // The body was not valid JSON
+            }
+            console.error('❌ Failed to seed demo users:', errorMsg);
+            toast.error(`Failed to seed demo users: ${errorMsg}`);
+          }
+        } catch (error: any) {
+          console.error('❌ Failed to seed demo users:', error);
+          toast.error('Failed to seed demo users.');
         }
-      } catch (error) {
-        console.warn('⚠️ Error seeding demo users:', error);
-        setDemoUsersSeeded(true); // Continue anyway
       }
     };
 
     seedDemoUsers();
-  }, []);
+  }, [demoUsers]);
 
   // Check Ailock service health on component mount
   useEffect(() => {
@@ -233,6 +250,21 @@ export default function ChatInterface() {
     }
   }, [sessionId]);
 
+  useEffect(() => {
+    // Load persisted user session
+    if (currentUser && currentUser.id !== 'loading') {
+      console.log('Current user is valid, fetching profile:', currentUser.name);
+      getProfile(currentUser.id)
+        .then(setAilockProfile)
+        .catch((err: any) => {
+          console.error("Failed to load Ailock profile", err);
+          toast.error("Could not load Ailock profile.");
+        });
+    } else {
+      console.log('User is not ready, skipping profile fetch.');
+    }
+  }, [currentUser.id]);
+
   const sendMessage = async () => {
     if (!input.trim() || isStreaming || !sessionId) return;
 
@@ -287,7 +319,6 @@ export default function ChatInterface() {
         }
 
         const reader = res.body.getReader();
-        const decoder = new TextDecoder();
         
         let assistantMessage: Message = {
           id: `${Date.now()}-ai`,
@@ -304,10 +335,19 @@ export default function ChatInterface() {
           try {
             while (true) {
               const { done, value } = await reader.read();
-              if (done) break;
+              if (done) {
+                setIsStreaming(false);
+                setStreamingMessageId(null);
+                setAilockStatus('available'); // Mark as working
+                setError(null);
+                console.log('✅ Message conversation saved to database');
+                handleXpGain();
+                resolve();
+                return;
+              }
 
-              const chunk = decoder.decode(value);
-              const lines = chunk.split('\n');
+              const decodedChunk = new TextDecoder().decode(value);
+              const lines = decodedChunk.split('\n');
 
               for (const line of lines) {
                 if (line.startsWith('data: ')) {
@@ -319,6 +359,7 @@ export default function ChatInterface() {
                     setAilockStatus('available'); // Mark as working
                     setError(null);
                     console.log('✅ Message conversation saved to database');
+                    handleXpGain();
                     resolve();
                     return;
                   }
@@ -632,13 +673,40 @@ export default function ChatInterface() {
 
   const getActionIcon = (iconName: string) => {
     const icons: Record<string, any> = {
-      Eye, MessageCircle, Copy, Plus, MapPin, TrendingUp, Users
+      Eye, MessageCircle, Copy, Plus, MapPin, TrendingUp, Users, DraftingCompass
     };
     const IconComponent = icons[iconName] || Eye;
     return <IconComponent className="w-4 h-4" />;
   };
 
   const isPersistentSession = sessionId && !sessionId.startsWith('local-') && !sessionId.startsWith('fallback-');
+
+  const handleXpGain = async () => {
+    if (!ailockProfile) return;
+
+    try {
+        const result = await gainXp(ailockProfile.id, 'chat_message_sent');
+        if (result.success) {
+            toast.success(`+${result.xpGained} XP`, { duration: 1500, icon: '✨' });
+            
+            // Optimistically update profile in state
+            setAilockProfile(prev => prev ? {...prev, xp: result.newXp} : null);
+
+            if (result.leveledUp) {
+                setLevelUpInfo({
+                    newLevel: result.newLevel,
+                    skillPointsGained: result.skillPointsGained,
+                    xpGained: result.xpGained
+                });
+                // Optimistically update level and skill points
+                setAilockProfile(prev => prev ? {...prev, level: result.newLevel, skillPoints: (prev.skillPoints || 0) + result.skillPointsGained} : null);
+            }
+        }
+    } catch (error) {
+        console.error("Failed to gain XP", error);
+        toast.error("Failed to record XP gain");
+    }
+  };
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-slate-900/95 to-slate-800/95 backdrop-blur-xl">
@@ -932,6 +1000,28 @@ export default function ChatInterface() {
           </div>
         </div>
       </div>
+
+      <Toaster
+        position="bottom-center"
+        toastOptions={{
+          className: '',
+          style: {
+            border: '1px solid #7132f5',
+            padding: '16px',
+            color: '#e5e7eb',
+            background: '#1f2937'
+          },
+        }}
+      />
+      {levelUpInfo && (
+        <LevelUpModal
+          isOpen={!!levelUpInfo}
+          onClose={() => setLevelUpInfo(null)}
+          newLevel={levelUpInfo.newLevel}
+          skillPointsGained={levelUpInfo.skillPointsGained}
+          xpGained={levelUpInfo.xpGained}
+        />
+      )}
     </div>
   );
 }

@@ -223,7 +223,7 @@ async function processAilockRequest(
   // 3. Generate Ailock response based on findings
   if (relevantIntents.length > 0) {
     // Found relevant intents - present them as cards
-    const response = generateIntentBasedResponse(userMessage, relevantIntents, language);
+    const response = generateIntentBasedResponse(relevantIntents, language);
     return {
       content: response.content,
       intents: relevantIntents,
@@ -382,37 +382,19 @@ function analyzeUserIntent(message: string, mode: string, language: string): any
 }
 
 async function searchRelevantIntents(userMessage: string, location: any, userIntent: any): Promise<any[]> {
-  try {
-    // Поиск интентов в базе данных по ключевым словам и локации
-    const searchTerms = userIntent.keywords.join(' ');
-    
-    const relevantIntents = await db
-      .select()
-      .from(intents)
-      .where(
-        sql`
-          (${intents.title} ILIKE ${'%' + searchTerms + '%'} OR 
-           ${intents.description} ILIKE ${'%' + searchTerms + '%'} OR
-           ${intents.category} ILIKE ${'%' + userIntent.category + '%'}) AND
-          (${intents.targetCountry} = ${location?.country} OR ${intents.targetCountry} IS NULL) AND
-          ${intents.status} = 'active'
-        `
-      )
-      .limit(5);
-
-    return relevantIntents.map(intent => ({
-      ...intent,
-      matchScore: calculateMatchScore(userMessage, intent),
-      distance: calculateDistance(location, intent)
-    }));
-    
-  } catch (error) {
-    console.error('Database search error:', error);
-    return [];
-  }
+  // Mock implementation, replace with actual database query
+  // In a real implementation, this would use embeddings for semantic search
+  return Promise.resolve([]);
 }
 
-function generateIntentBasedResponse(userMessage: string, intents: any[], language: string): any {
+function generateIntentBasedResponse(intents: any[], language: string): any {
+  if (intents.length === 0) {
+    return {
+      content: "I couldn't find any relevant opportunities for you.",
+      actions: []
+    };
+  }
+
   const texts = {
     en: {
       found: `I found ${intents.length} relevant opportunities for you:`,

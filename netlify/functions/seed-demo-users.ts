@@ -1,7 +1,6 @@
-import type { Handler } from '@netlify/functions';
 import { db } from '../../src/lib/db';
 import { users } from '../../src/lib/schema';
-import { eq } from 'drizzle-orm';
+import type { Handler } from '@netlify/functions';
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
