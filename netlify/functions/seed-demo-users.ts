@@ -20,7 +20,7 @@ export const handler: Handler = async (event) => {
     // Define demo users with fixed UUIDs that match the frontend
     const demoUsersData = [
       {
-        id: 'd9c1b3a3-b4e8-4b5a-9b4b-9b4b9b4b9b4a', // Lirea's fixed UUID
+        id: '6f3f3134-dd24-4665-b6cd-f9caf57d859f', // Lirea's fixed UUID
         email: 'lirea.designer@example.com',
         name: 'Lirea',
         country: 'BR',
@@ -29,7 +29,7 @@ export const handler: Handler = async (event) => {
         languages: ['pt', 'en']
       },
       {
-        id: 'a8b2c4d5-e6f7-4a9b-8c1d-8c1d8c1d8c1d', // Marco's fixed UUID
+        id: '6376f30a-1ee4-4aa9-bdde-dd9ac0be6f24', // Marco's fixed UUID
         email: 'marco.manager@fintechrio.com',
         name: 'Marco',
         country: 'BR',
