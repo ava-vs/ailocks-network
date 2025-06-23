@@ -27,68 +27,105 @@ export const handler: Handler = async (event) => {
 
     console.log(`🔍 Fetching intents for ${userCity}, ${userCountry} with search: "${searchQuery || 'none'}"`);
 
-    // If semantic search is requested and OpenAI is available
-    if (searchQuery && process.env.OPENAI_API_KEY) {
-      try {
-        console.log(`🧠 Performing semantic search for: "${searchQuery}"`);
-        const semanticResults = await embeddingService.searchByText(searchQuery, limit);
-        
-        if (semanticResults.length > 0) {
-          console.log(`✅ Found ${semanticResults.length} semantic matches`);
-          
-          // Enrich semantic results with user data and format
-          const enrichedResults = await Promise.all(
-            semanticResults.map(async (intent: any) => {
-              // Get user data
-              const [user] = await db
-                .select({ name: users.name, email: users.email })
-                .from(users)
-                .where(eq(users.id, intent.user_id))
-                .limit(1);
+    // If a search query is provided, perform a hybrid search
+    if (searchQuery) {
+      const allIntents: any[] = [];
+      const intentIds = new Set<string>();
 
-              return {
-                id: intent.id,
-                userId: intent.user_id,
-                title: intent.title,
-                description: intent.description,
-                category: intent.category,
-                targetCountry: intent.target_country,
-                targetCity: intent.target_city,
-                requiredSkills: intent.required_skills || [],
-                budget: intent.budget ? `$${Math.floor(intent.budget / 1000)}k` : null,
-                timeline: intent.timeline,
-                priority: intent.priority,
-                matchScore: intent.match_percentage || 85,
-                distance: calculateDistance(userCountry, userCity, intent.target_country, intent.target_city),
-                createdAt: formatTimeAgo(intent.created_at),
-                userName: user?.name || 'Anonymous',
-                userEmail: user?.email,
-                isOwn: userId && intent.user_id === userId,
-                semanticMatch: true,
-                similarityScore: intent.similarity_score
-              };
-            })
-          );
+      // 1. Semantic Search (for intents with embeddings)
+      if (process.env.OPENAI_API_KEY) {
+        try {
+          console.log(`🧠 Performing semantic search for: "${searchQuery}"`);
+          const semanticResults = await embeddingService.searchByText(searchQuery, limit);
+          if (semanticResults.length > 0) {
+            console.log(`✅ Found ${semanticResults.length} semantic matches`);
+            for (const intent of semanticResults) {
+              if (!intentIds.has(intent.id)) {
+                allIntents.push({ ...intent, semanticMatch: true });
+                intentIds.add(intent.id);
+              }
+            }
+          }
+        } catch (semanticError) {
+          console.warn('⚠️ Semantic search failed, continuing with keyword search:', semanticError);
+        }
+      }
+
+      // 2. Keyword Search (for all intents, as a fallback and for those without embeddings)
+      console.log(`📝 Performing keyword search for: "${searchQuery}"`);
+      const keywordResults = await db
+        .select()
+        .from(intents)
+        .where(
+          or(
+            sql`title ILIKE ${'%' + searchQuery + '%'}`,
+            sql`description ILIKE ${'%' + searchQuery + '%'}`
+          )
+        )
+        .limit(limit);
+
+      for (const intent of keywordResults) {
+        if (!intentIds.has(intent.id)) {
+          allIntents.push({ ...intent, semanticMatch: false, match_percentage: 50 }); // Add default score
+          intentIds.add(intent.id);
+        }
+      }
+
+      // 3. Enrich and format combined results
+      const enrichedResults = await Promise.all(
+        allIntents.map(async (intent: any) => {
+          const [user] = await db
+            .select({ name: users.name, email: users.email })
+            .from(users)
+            .where(eq(users.id, intent.userId))
+            .limit(1);
 
           return {
-            statusCode: 200,
-            headers: {
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*'
-            },
-            body: JSON.stringify({
-              intents: enrichedResults,
-              location: { country: userCountry, city: userCity },
-              totalCount: enrichedResults.length,
-              searchType: 'semantic',
-              searchQuery,
-              timestamp: new Date().toISOString()
-            })
+            id: intent.id,
+            userId: intent.userId,
+            title: intent.title,
+            description: intent.description,
+            category: intent.category,
+            targetCountry: intent.targetCountry,
+            targetCity: intent.targetCity,
+            requiredSkills: intent.requiredSkills || [],
+            budget: intent.budget ? `$${Math.floor(intent.budget / 1000)}k` : null,
+            timeline: intent.timeline,
+            priority: intent.priority,
+            matchScore: intent.match_percentage || 85,
+            distance: calculateDistance(userCountry, userCity, intent.targetCountry, intent.targetCity),
+            createdAt: formatTimeAgo(intent.createdAt),
+            userName: user?.name || 'Anonymous',
+            userEmail: user?.email,
+            isOwn: userId && intent.userId === userId,
+            semanticMatch: intent.semanticMatch,
+            similarityScore: intent.similarity_score
           };
-        }
-      } catch (semanticError) {
-        console.warn('⚠️ Semantic search failed, falling back to regular search:', semanticError);
-      }
+        })
+      );
+      
+      // Sort final results: semantic matches first, then by score
+      enrichedResults.sort((a, b) => {
+        if (a.semanticMatch && !b.semanticMatch) return -1;
+        if (!a.semanticMatch && b.semanticMatch) return 1;
+        return (b.similarityScore || b.matchScore) - (a.similarityScore || a.matchScore);
+      });
+
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        },
+        body: JSON.stringify({
+          intents: enrichedResults,
+          location: { country: userCountry, city: userCity },
+          totalCount: enrichedResults.length,
+          searchType: 'hybrid',
+          searchQuery,
+          timestamp: new Date().toISOString()
+        })
+      };
     }
 
     // Regular database search (fallback or when no search query)
