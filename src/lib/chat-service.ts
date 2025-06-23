@@ -288,7 +288,11 @@ export class ChatService {
       const updatedMessages = [
         ...messagesToKeep,
         {
-          ...newMessage,
+          id: newMessage.id,
+          role: newMessage.role,
+          content: newMessage.content,
+          mode: newMessage.mode,
+          metadata: newMessage.metadata || {},
           timestamp: newMessage.timestamp.toISOString()
         }
       ];
