@@ -33,8 +33,16 @@ export default async (request: Request) => {
       const session = await chatService.getSession(sessionId);
       
       if (!session) {
-        return new Response(JSON.stringify({ error: 'Session not found' }), {
-          status: 404,
+        return new Response(JSON.stringify({
+          sessionId: sessionId,
+          messages: [],
+          mode: 'researcher', // Default values
+          language: 'en',
+          isActive: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }), {
+          status: 200,
           headers: {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*'
