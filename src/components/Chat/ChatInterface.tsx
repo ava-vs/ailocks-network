@@ -220,9 +220,21 @@ export default function ChatInterface() {
         return; // Skip loading for fallback sessions
       }
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+        console.warn('⚠️ Chat history request timed out after 10 seconds.');
+        setError('Failed to load history: connection timed out.');
+      }, 10000); // 10-second timeout
+
       try {
         console.log('📥 Loading chat history for session:', sessionId);
-        const response = await fetch(`/.netlify/functions/chat-history?sessionId=${sessionId}`);
+        const response = await fetch(`/.netlify/functions/chat-history?sessionId=${sessionId}`, {
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId); // Clear timeout if fetch succeeds
+
         if (response.ok) {
           const data = await response.json();
           if (data.messages && data.messages.length > 0) {
@@ -237,10 +249,15 @@ export default function ChatInterface() {
           }
         } else {
           console.warn('⚠️ Failed to load chat history:', response.status);
+          setError(`Failed to load history: Server responded with status ${response.status}`);
         }
-      } catch (error) {
-        console.warn('Failed to load chat history:', error);
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.warn('Failed to load chat history:', error);
+          setError('Failed to load history due to a network error.');
+        }
       } finally {
+        clearTimeout(timeoutId); // Ensure timeout is cleared on exit
         setChatHistoryLoaded(true);
       }
     };
