@@ -73,7 +73,6 @@ export default function ChatInterface() {
   const [lastUserMessage, setLastUserMessage] = useState<string>('');
   const [ailockStatus, setAilockStatus] = useState<'unknown' | 'available' | 'unavailable'>('unknown');
   const [foundIntents, setFoundIntents] = useState<IntentCard[]>([]);
-  const [chatHistoryLoaded, setChatHistoryLoaded] = useState(false);
   const [demoUsersSeeded, setDemoUsersSeeded] = useState(false);
   const [ailockProfile, setAilockProfile] = useState<FullAilockProfile | null>(null);
   const [levelUpInfo, setLevelUpInfo] = useState<{ newLevel: number, skillPointsGained: number, xpGained: number } | null>(null);
@@ -216,25 +215,13 @@ export default function ChatInterface() {
   useEffect(() => {
     const loadChatHistory = async () => {
       if (!sessionId || sessionId.startsWith('local-') || sessionId.startsWith('fallback-')) {
-        setChatHistoryLoaded(true);
-        return; // Skip loading for fallback sessions
+        return;
       }
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-        console.warn('⚠️ Chat history request timed out after 10 seconds.');
-        setError('Failed to load history: connection timed out.');
-      }, 10000); // 10-second timeout
-
       try {
-        console.log('📥 Loading chat history for session:', sessionId);
-        const response = await fetch(`/.netlify/functions/chat-history?sessionId=${sessionId}`, {
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId); // Clear timeout if fetch succeeds
-
+        console.log('📥 Loading chat history in background for session:', sessionId);
+        const response = await fetch(`/.netlify/functions/chat-history?sessionId=${sessionId}`);
+        
         if (response.ok) {
           const data = await response.json();
           if (data.messages && data.messages.length > 0) {
@@ -243,22 +230,15 @@ export default function ChatInterface() {
               timestamp: new Date(msg.timestamp)
             }));
             setMessages(loadedMessages);
-            console.log('✅ Chat history loaded:', loadedMessages.length, 'messages');
+            console.log('✅ Background chat history loaded:', loadedMessages.length, 'messages');
           } else {
-            console.log('📭 No chat history found for session');
+            console.log('📭 No chat history found for this session.');
           }
         } else {
-          console.warn('⚠️ Failed to load chat history:', response.status);
-          setError(`Failed to load history: Server responded with status ${response.status}`);
+          console.warn(`⚠️ Failed to load chat history in background: ${response.status}`);
         }
-      } catch (error: any) {
-        if (error.name !== 'AbortError') {
-          console.warn('Failed to load chat history:', error);
-          setError('Failed to load history due to a network error.');
-        }
-      } finally {
-        clearTimeout(timeoutId); // Ensure timeout is cleared on exit
-        setChatHistoryLoaded(true);
+      } catch (error) {
+        console.warn('Failed to load chat history in background:', error);
       }
     };
 
@@ -763,7 +743,7 @@ export default function ChatInterface() {
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto min-h-0 p-6">
-        {messages.length === 0 && chatHistoryLoaded ? (
+        {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full">
             <div className="text-center max-w-2xl">
               {/* AI Character Image */}
@@ -817,11 +797,6 @@ export default function ChatInterface() {
                 </div>
               )}
             </div>
-          </div>
-        ) : !chatHistoryLoaded ? (
-          <div className="flex flex-col items-center justify-center h-full">
-            <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mb-4"></div>
-            <p className="text-white/60 text-sm">Loading chat history...</p>
           </div>
         ) : (
           <div className="max-w-4xl mx-auto">
