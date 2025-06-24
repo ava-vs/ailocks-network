@@ -13,18 +13,59 @@ export interface UserLocation {
   isDefault?: boolean;
 }
 
-// Global state atoms - Initialize with safe defaults for SSR
-export const currentMode = atom<AIMode>('researcher');
-export const currentLanguage = atom<'en' | 'ru'>('en');
-export const userLocation = atom<UserLocation>({
-  country: 'US',
-  city: 'New York',
-  timezone: 'America/New_York',
-  isDefault: true
+export const appState = atom({
+  activeMode: 'researcher' as AIMode,
+  language: 'en' as Language,
+  userLocation: { country: 'US', city: 'New York', timezone: 'America/New_York', isDefault: true } as UserLocation,
+  isClientInitialized: false,
+  isMobileMenuOpen: false, // For controlling the mobile sidebar
 });
 
-// Client-side initialization flag
-export const isClientInitialized = atom<boolean>(false);
+// Getter for client initialization status
+export const isClientInitialized = atom(false);
+
+// Actions to update the store
+export function initializeClient() {
+  const currentState = appState.get();
+  if (!currentState.isClientInitialized) {
+    appState.set({ ...currentState, isClientInitialized: true });
+    isClientInitialized.set(true);
+    //
+  }
+}
+
+export function setMode(mode: AIMode) {
+  appState.set({ ...appState.get(), activeMode: mode });
+}
+
+export function setLanguage(language: Language) {
+  const currentLanguage = appState.get().language;
+  if (currentLanguage !== language) {
+    appState.set({ ...appState.get(), language });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ailocks-language', language);
+    }
+  }
+}
+
+export function setLocation(location: UserLocation) {
+  appState.set({ ...appState.get(), userLocation: location });
+}
+
+export function toggleMobileMenu() {
+  const state = appState.get();
+  appState.set({ ...state, isMobileMenuOpen: !state.isMobileMenuOpen });
+}
+
+// Legacy stores - can be phased out
+export const currentLanguage = atom<Language>('en');
+export const userLocation = atom<UserLocation>({ country: 'US', city: 'New York', timezone: 'America/New_York', isDefault: true });
+
+// Sync legacy stores with the main appState
+appState.subscribe(state => {
+  currentLanguage.set(state.language);
+  userLocation.set(state.userLocation);
+});
 
 // Initialize from server-detected data only on client
 if (typeof window !== 'undefined') {
@@ -63,30 +104,5 @@ if (typeof window !== 'undefined') {
     document.addEventListener('DOMContentLoaded', initializeFromServer);
   } else {
     initializeFromServer();
-  }
-}
-
-// Actions
-export function setMode(mode: AIMode) {
-  currentMode.set(mode);
-}
-
-export function setLanguage(language: Language) {
-  currentLanguage.set(language);
-  // Save to localStorage for persistence (only on client)
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('ailocks-language', language);
-  }
-}
-
-export function setLocation(location: UserLocation) {
-  userLocation.set({
-    ...location,
-    isDefault: false // Mark as user-overridden
-  });
-  
-  // Save to localStorage for persistence (only on client)
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('ailocks-location', JSON.stringify(location));
   }
 }

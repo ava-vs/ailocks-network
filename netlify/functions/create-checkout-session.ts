@@ -1,4 +1,7 @@
 import type { Handler } from '@netlify/functions';
+// Note: You need to install the stripe-node library:
+// npm install stripe
+// You also need to set the STRIPE_SECRET_KEY environment variable.
 
 export const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -103,13 +106,3 @@ export const handler: Handler = async (event) => {
     };
   }
 };
-
-// Helper function to map plan IDs to Stripe price IDs
-function getPriceId(planId: string): string {
-  const priceMap: Record<string, string> = {
-    'pro': process.env.STRIPE_PRICE_PRO_MONTHLY || 'price_pro_monthly',
-    'enterprise': process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY || 'price_enterprise_monthly'
-  };
-  
-  return priceMap[planId] || '';
-}

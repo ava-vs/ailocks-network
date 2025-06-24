@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Star, Settings } from 'lucide-react';
-import AilockAvatar from './AilockAvatar';
 import AilockDashboard from './AilockDashboard';
 import { ailockApi } from '@/lib/ailock/api';
 import type { FullAilockProfile } from '@/lib/ailock/core';
@@ -62,15 +61,33 @@ export default function AilockWidget() {
   const requiredXp = xpForNextLevel - currentLevelXp;
   const xpPercentage = Math.min((progressXp / requiredXp) * 100, 100);
 
+  const getAvatarGradient = () => {
+    if (profile.level >= 15) return 'from-purple-400 via-pink-400 to-yellow-400';
+    if (profile.level >= 10) return 'from-blue-400 via-purple-400 to-pink-400';
+    if (profile.level >= 5) return 'from-green-400 via-blue-400 to-purple-400';
+    return 'from-cyan-400 via-blue-400 to-indigo-400';
+  };
+
   return (
     <>
       <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-all cursor-pointer">
         <div className="flex items-center space-x-3 mb-3" onClick={() => setIsDashboardOpen(true)}>
-          <AilockAvatar 
-            level={profile.level}
-            characteristics={profile.characteristics}
-            size="small"
-          />
+          {/* Avatar */}
+          <div className="relative">
+            <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getAvatarGradient()} p-0.5`}>
+              <div className="w-full h-full rounded-lg bg-slate-800/90 flex items-center justify-center">
+                <img 
+                  src="/images/ailock-avatar.png" 
+                  alt="Ailock Avatar" 
+                  className="w-8 h-8 object-contain animate-breathe"
+                />
+              </div>
+            </div>
+            {/* Level badge */}
+            <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+              {profile.level}
+            </div>
+          </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-white font-medium text-sm truncate">{profile.name}</h3>
             <p className="text-white/60 text-xs">Level {profile.level}</p>

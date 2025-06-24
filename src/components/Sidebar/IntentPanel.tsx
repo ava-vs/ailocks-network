@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Clock, Users, Zap, Star, Calendar, Filter, Database, AlertCircle, Crown, Bot } from 'lucide-react';
+import { MapPin, Clock, Users, Zap, Star, Calendar, Filter, Database, AlertCircle, Crown, Bot, Search, Plus, Target, ChevronUp, ChevronDown, Bell } from 'lucide-react';
 import { useStore } from '@nanostores/react';
-import { currentLanguage, userLocation } from '../../lib/store';
+import { appState } from '../../lib/store';
 import { useUserSession } from '../../hooks/useUserSession';
+import { cn } from '../../lib/utils';
 import AilockWidget from '../Ailock/AilockWidget';
+import { ailockApi } from '../../lib/ailock/api';
+import type { FullAilockProfile } from '../../lib/ailock/core';
 
 interface Intent {
   id: string;
@@ -22,9 +25,12 @@ interface Intent {
   isOwn?: boolean;
 }
 
-export default function IntentPanel() {
-  const language = useStore(currentLanguage);
-  const location = useStore(userLocation);
+interface IntentPanelProps {
+  isExpanded?: boolean;
+}
+
+export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
+  const { language, userLocation: location } = useStore(appState);
   const { currentUser } = useUserSession();
   
   const [myIntents, setMyIntents] = useState<Intent[]>([]);
@@ -32,6 +38,9 @@ export default function IntentPanel() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [dataSource, setDataSource] = useState<'real' | 'mock' | 'error'>('mock');
+  const [intentsExpanded, setIntentsExpanded] = useState(true);
+  const [newNotifications, setNewNotifications] = useState(1); // "Just Added" карточка считается как новое уведомление
+  const [ailockProfile, setAilockProfile] = useState<FullAilockProfile | null>(null);
 
   // Listen for new intents created from chat
   useEffect(() => {
@@ -51,6 +60,8 @@ export default function IntentPanel() {
         };
         
         setMyIntents(prev => [intentWithMetadata, ...prev]);
+        // Add notification for new intent
+        setNewNotifications(prev => prev + 1);
       }
     };
 
@@ -72,6 +83,22 @@ export default function IntentPanel() {
   useEffect(() => {
     fetchIntents();
   }, [location, filter, currentUser.id]);
+
+  // Load Ailock profile
+  useEffect(() => {
+    if (currentUser.id && currentUser.id !== 'loading') {
+      loadAilockProfile();
+    }
+  }, [currentUser.id]);
+
+  const loadAilockProfile = async () => {
+    try {
+      const profile = await ailockApi.getProfile(currentUser.id);
+      setAilockProfile(profile);
+    } catch (error) {
+      console.error('Failed to load Ailock profile:', error);
+    }
+  };
 
   const fetchIntents = async () => {
     try {
@@ -282,16 +309,13 @@ export default function IntentPanel() {
   const getTexts = () => {
     const texts = {
       en: {
+        title: 'Intent Panel',
+        dataSource: 'Data Source',
         location: 'Your Location',
         activeMatching: 'Active Matching',
         nearbyOpportunities: 'Nearby Opportunities',
         myIntents: 'My Intents',
-        createIntent: 'Create New Intent',
-        urgent: 'Urgent',
-        loading: 'Loading opportunities...',
-        noIntents: 'No opportunities found in your area.',
-        noMyIntents: 'No intents created yet. Start a conversation and create your first intent!',
-        matchScore: 'Match',
+        filter: 'Filter',
         all: 'All',
         technology: 'Technology',
         research: 'Research',
@@ -300,25 +324,28 @@ export default function IntentPanel() {
         blockchain: 'Blockchain',
         marketing: 'Marketing',
         security: 'Security',
-        locationUpdated: 'Location updated - refreshing opportunities...',
-        dataSource: 'Data Source',
+        createIntent: 'Create Intent',
+        loading: 'Loading...',
+        noIntents: 'No intents found.',
+        urgent: 'Urgent',
         realData: 'Live Database',
         mockData: 'Demo Data',
         errorData: 'Offline Mode',
         createdByYou: 'Created by you',
-        myAilock: 'My Ailock'      
+        myAilock: 'My Ailock',
+        matchScore: 'Match Score',
+        real: 'Live Database',
+        mock: 'Demo Data',
+        error: 'Offline Mode',
       },
       ru: {
+        title: 'Панель интентов',
+        dataSource: 'Источник данных',
         location: 'Ваше местоположение',
-        activeMatching: 'Активный поиск',
-        nearbyOpportunities: 'Возможности рядом',
+        activeMatching: 'Активный подбор',
+        nearbyOpportunities: 'Возможности поблизости',
         myIntents: 'Мои интенты',
-        createIntent: 'Создать новый интент',
-        urgent: 'Срочно',
-        loading: 'Загрузка возможностей...',
-        noIntents: 'В вашем районе не найдено возможностей.',
-        noMyIntents: 'Интенты еще не созданы. Начните разговор и создайте свой первый интент!',
-        matchScore: 'Совпадение',
+        filter: 'Фильтр',
         all: 'Все',
         technology: 'Технологии',
         research: 'Исследования',
@@ -327,13 +354,18 @@ export default function IntentPanel() {
         blockchain: 'Блокчейн',
         marketing: 'Маркетинг',
         security: 'Безопасность',
-        locationUpdated: 'Местоположение обновлено - обновляем возможности...',
-        dataSource: 'Источник данных',
-        realData: 'Живая база данных',
-        mockData: 'Демо данные',
-        errorData: 'Офлайн режим',
+        createIntent: 'Создать интент',
+        loading: 'Загрузка...',
+        noIntents: 'Нет доступных интентов.',
+        urgent: 'Срочно',
+        realData: 'Live Database',
+        mockData: 'Demo Data',
+        errorData: 'Offline Mode',
         createdByYou: 'Создано вами',
-        myAilock: 'Мой Ailock'
+        myAilock: 'Мой Ailock',
+        real: 'Live Database',
+        mock: 'Demo Data',
+        error: 'Offline Mode',
       }
     };
     return texts[language as keyof typeof texts] || texts.en;
@@ -358,248 +390,264 @@ export default function IntentPanel() {
     }
   };
 
+  const getAvatarGradient = () => {
+    if (!ailockProfile) return 'from-cyan-400 via-blue-400 to-indigo-400';
+    if (ailockProfile.level >= 15) return 'from-purple-400 via-pink-400 to-yellow-400';
+    if (ailockProfile.level >= 10) return 'from-blue-400 via-purple-400 to-pink-400';
+    if (ailockProfile.level >= 5) return 'from-green-400 via-blue-400 to-purple-400';
+    return 'from-cyan-400 via-blue-400 to-indigo-400';
+  };
+
   const texts = getTexts();
   const filteredOtherIntents = filter === 'all' ? otherIntents : otherIntents.filter(intent => 
     intent.category.toLowerCase() === filter.toLowerCase()
   );
 
   return (
-    <div className="w-80 bg-gradient-to-b from-slate-900/95 to-slate-800/95 backdrop-blur-xl border-l border-white/10 flex flex-col h-full flex-shrink-0">
-      {/* Ailock Widget */}
-        <div className="flex-shrink-0 p-6 border-b border-white/10">
-          <div className="flex items-center space-x-2 text-white mb-4">
-            <Bot className="w-5 h-5 text-purple-400" />
-            <span className="font-medium">{texts.myAilock}</span>
-          </div>
-        <AilockWidget />
-      </div>
-      
-      {/* Location Header */}
-      <div className="flex-shrink-0 p-6 border-b border-white/10">
-        <div className="flex items-center space-x-3 text-white mb-3">
-          <MapPin className="w-5 h-5 text-blue-400" />
-          <span className="font-medium">{texts.location}</span>
-        </div>
-        <p className="text-white/70 text-sm mb-4">
-          {location.city}, {location.country}
-          {location.isDefault && (
-            <span className="block text-xs text-white/50 mt-1">
-              (Default location)
-            </span>
-          )}
-        </p>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
-            <span className="text-xs text-emerald-400 font-medium">{texts.activeMatching}</span>
-          </div>
-          
-          {/* Data Source Indicator */}
-          <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg border text-xs ${getDataSourceColor()}`}>
-            {dataSource === 'real' && <Database className="w-3 h-3" />}
-            {dataSource === 'mock' && <Star className="w-3 h-3" />}
-            {dataSource === 'error' && <AlertCircle className="w-3 h-3" />}
-            <span className="font-medium">
-              {dataSource === 'real' && texts.realData}
-              {dataSource === 'mock' && texts.mockData}
-              {dataSource === 'error' && texts.errorData}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* My Intents Section */}
-      {myIntents.length > 0 && (
-        <div className="flex-shrink-0 p-6 border-b border-white/10 bg-gradient-to-r from-blue-500/10 to-indigo-600/10">
-          <div className="flex items-center space-x-2 mb-4">
-            <Crown className="w-5 h-5 text-blue-400" />
-            <h3 className="text-white font-semibold">{texts.myIntents}</h3>
-            <span className="text-xs text-blue-400 bg-blue-500/20 px-2 py-1 rounded-full">
-              {myIntents.length}
-            </span>
-          </div>
-          <div className="space-y-3 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-            {myIntents.map((intent) => (
-              <div key={intent.id} className="bg-gradient-to-br from-blue-500/20 to-indigo-600/20 border border-blue-500/30 rounded-xl p-4 shadow-lg">
-                <div className="flex items-start justify-between mb-2">
-                  <h4 className="text-white font-medium text-sm line-clamp-2 flex-1">
-                    {intent.title}
-                  </h4>
-                  <div className="flex items-center space-x-1 ml-2">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                    <span className="text-xs text-blue-400 font-medium">Live</span>
-                  </div>
-                </div>
-                
-                <p className="text-white/60 text-xs leading-relaxed mb-3 line-clamp-2">
-                  {intent.description}
-                </p>
-                
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {intent.requiredSkills.slice(0, 2).map((skill) => (
-                    <span 
-                      key={skill}
-                      className="bg-blue-400/20 text-blue-300 px-2 py-1 rounded-md text-xs font-medium border border-blue-400/30"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                  {intent.requiredSkills.length > 2 && (
-                    <span className="text-white/40 text-xs px-2 py-1">
-                      +{intent.requiredSkills.length - 2}
-                    </span>
-                  )}
-                </div>
-                
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-blue-300 font-medium">{texts.createdByYou}</span>
-                  <span className="text-white/50">{intent.createdAt}</span>
-                </div>
+    <div className={cn("flex flex-col h-full text-white p-2", !isExpanded && "items-center")}>
+      {!isExpanded && (
+        <div className="flex flex-col items-center space-y-4 p-2">
+          <div 
+            className="w-12 h-12 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer relative"
+            onClick={() => {
+              // Clear all notifications when avatar is clicked
+              setNewNotifications(0);
+            }}
+            title={newNotifications > 0 ? `${newNotifications} new notification${newNotifications !== 1 ? 's' : ''}` : 'No new notifications'}
+          >
+            {/* Ailock Avatar with dynamic gradient border */}
+            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getAvatarGradient()} p-0.5 relative`}>
+              <div className="w-full h-full rounded-lg bg-slate-800/90 flex items-center justify-center">
+                <img 
+                  src="/images/ailock-avatar.png"
+                  alt="Ailock Avatar" 
+                  className="w-6 h-6 object-contain"
+                />
               </div>
-            ))}
+              {/* Level badge */}
+              {ailockProfile && (
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center justify-center border border-slate-800">
+                  {ailockProfile.level}
+                </div>
+              )}
+            </div>
+            {/* Notification Badge */}
+            {newNotifications > 0 && (
+              <div className="absolute -top-1 -left-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center shadow-lg border border-slate-800">
+                <span className="text-xs font-medium text-white">{newNotifications}</span>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Filter Section */}
-      <div className="flex-shrink-0 p-6 border-b border-white/10">
-        <div className="flex items-center space-x-2 mb-3">
-          <Filter className="w-4 h-4 text-white/60" />
-          <span className="text-sm font-medium text-white/80">Filter</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {['all', 'technology', 'research', 'design', 'analytics', 'blockchain', 'marketing', 'security'].map((filterOption) => (
-            <button
-              key={filterOption}
-              onClick={() => setFilter(filterOption)}
-              className={`px-3 py-1.5 text-xs rounded-lg transition-all ${
-                filter === filterOption
-                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                  : 'bg-white/5 text-white/60 hover:text-white/80 hover:bg-white/10 border border-white/10'
-              }`}
-            >
-              {texts[filterOption as keyof typeof texts] || filterOption}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Nearby Intents */}
-      <div className="flex-1 overflow-y-auto p-6 min-h-0 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-        <h3 className="text-white font-semibold mb-4 flex items-center space-x-2">
-          <Users className="w-5 h-5 text-purple-400" />
-          <span>{texts.nearbyOpportunities}</span>
-          <span className="text-xs text-white/50 bg-white/10 px-2 py-1 rounded-full">
-            {filteredOtherIntents.length}
-          </span>
-        </h3>
-
-        {loading ? (
-          <div className="text-center py-8">
-            <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-white/60 text-sm">{texts.loading}</p>
-          </div>
-        ) : filteredOtherIntents.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-white/60 text-sm">{texts.noIntents}</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filteredOtherIntents.map((intent) => (
-              <div 
-                key={intent.id}
-                className="backdrop-blur-sm rounded-xl p-4 border hover:border-blue-500/30 transition-all cursor-pointer group shadow-lg hover:shadow-xl bg-white/5 border-white/10 hover:bg-white/10"
+      {isExpanded && (
+        <div className="p-2 space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-white">In Work</h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setNewNotifications(0)}
+                className="p-1 hover:bg-white/10 rounded transition-colors"
+                title={newNotifications > 0 ? `Mark ${newNotifications} notification${newNotifications !== 1 ? 's' : ''} as read` : 'No new notifications'}
               >
-                {/* Header */}
-                <div className="flex items-start justify-between mb-3">
-                  <h4 className="text-white font-medium text-sm group-hover:text-blue-400 transition-colors line-clamp-2 flex-1">
-                    {intent.title}
-                  </h4>
-                  <div className="flex items-center space-x-2 ml-2">
-                    {intent.priority === 'urgent' && (
-                      <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg border ${getPriorityColor(intent.priority)}`}>
-                        <Zap className="w-3 h-3" />
-                        <span className="text-xs font-medium">{texts.urgent}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center space-x-1 bg-blue-500/20 text-blue-400 px-2 py-1 rounded-lg border border-blue-500/30">
-                      <Star className="w-3 h-3" />
-                      <span className="text-xs font-medium">{intent.matchScore}%</span>
+                <Bell className={`w-4 h-4 ${newNotifications > 0 ? 'text-blue-400' : 'text-white/60'}`} />
+              </button>
+              {newNotifications > 0 && (
+                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+              )}
+            </div>
+          </div>
+
+          {/* Ailock Widget */}
+          <div className="mb-4">
+            <AilockWidget />
+          </div>
+
+          {/* Work Items */}
+          <div className="space-y-3">
+            <div 
+              className="glass-morphism rounded-xl p-4 hover-glow cursor-pointer transition-all"
+              onClick={() => {
+                // Mark as read when clicked
+                if (newNotifications > 0) {
+                  setNewNotifications(prev => Math.max(0, prev - 1));
+                }
+              }}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <h4 className="font-medium text-sm text-white">Design Collaboration</h4>
+                <div className="flex items-center gap-1">
+                  {newNotifications > 0 ? (
+                    <div className="flex items-center gap-1">
+                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-blue-400 font-medium">Just Added</span>
                     </div>
-                  </div>
-                </div>
-
-                {/* Description */}
-                <p className="text-white/60 text-xs leading-relaxed mb-3 line-clamp-3">
-                  {intent.description}
-                </p>
-
-                {/* Skills */}
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {intent.requiredSkills.slice(0, 3).map((skill) => (
-                    <span 
-                      key={skill}
-                      className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded-md text-xs font-medium border border-purple-500/30"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                  {intent.requiredSkills.length > 3 && (
-                    <span className="text-white/40 text-xs px-2 py-1">
-                      +{intent.requiredSkills.length - 3} more
-                    </span>
+                  ) : (
+                    <span className="text-xs text-white/60">Read</span>
                   )}
                 </div>
+              </div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs text-white/60">Rating:</span>
+                <span className="text-xs text-yellow-400">4.8/5</span>
+              </div>
+              <p className="text-xs text-white/60 mb-3">
+                UI/UX design project for modern web app. Looking for creative collaboration with experienced designers.
+              </p>
+              <div className="flex gap-2">
+                <button 
+                  className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs font-medium hover:bg-yellow-500/30 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Handle notify action
+                  }}
+                >
+                  🔔 Notify
+                </button>
+                <button 
+                  className="px-3 py-1 bg-green-500/20 text-green-400 rounded text-xs font-medium hover:bg-green-500/30 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Handle active action
+                  }}
+                >
+                  ✅ Active
+                </button>
+              </div>
+            </div>
+          </div>
 
-                {/* Budget & Timeline */}
-                {(intent.budget || intent.timeline) && (
-                  <div className="flex items-center justify-between text-xs text-white/50 mb-3">
-                    {intent.budget && (
-                      <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded border border-emerald-500/30">
-                        {intent.budget}
-                      </span>
-                    )}
-                    {intent.timeline && (
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="w-3 h-3" />
-                        <span>{intent.timeline}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Footer */}
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-2 text-white/50">
-                    <MapPin className="w-3 h-3" />
-                    <span>{intent.distance}</span>
-                  </div>
-                  <div className="flex items-center space-x-2 text-white/50">
-                    <Clock className="w-3 h-3" />
-                    <span>{intent.createdAt}</span>
-                  </div>
+          {/* Intents Section */}
+          <div className="glass-morphism rounded-xl p-4">
+            <button 
+              onClick={() => setIntentsExpanded(!intentsExpanded)}
+              className="flex items-center justify-between w-full mb-3"
+            >
+              <div className="flex items-center gap-2">
+                <Target className="w-4 h-4 text-blue-400" />
+                <span className="font-medium text-sm text-white">Intents</span>
+                <div className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">
+                  {myIntents.length + filteredOtherIntents.length}
                 </div>
+              </div>
+              {intentsExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
 
-                {/* User info */}
-                {intent.userName && (
-                  <div className="mt-2 pt-2 border-t border-white/10">
-                    <span className="text-xs text-white/40">
-                      by {intent.userName}
-                    </span>
+            {intentsExpanded && (
+              <div className="space-y-2">
+                <div className="flex gap-2 mb-3">
+                  <button 
+                    onClick={() => setFilter('all')}
+                    className={`px-2 py-1 rounded text-xs transition-colors ${
+                      filter === 'all' 
+                        ? 'bg-blue-500/20 text-blue-400' 
+                        : 'hover:bg-white/10 text-white/60'
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button 
+                    onClick={() => setFilter('design')}
+                    className={`px-2 py-1 rounded text-xs transition-colors ${
+                      filter === 'design' 
+                        ? 'bg-blue-500/20 text-blue-400' 
+                        : 'hover:bg-white/10 text-white/60'
+                    }`}
+                  >
+                    Design
+                  </button>
+                  <button 
+                    onClick={() => setFilter('technology')}
+                    className={`px-2 py-1 rounded text-xs transition-colors ${
+                      filter === 'technology' 
+                        ? 'bg-blue-500/20 text-blue-400' 
+                        : 'hover:bg-white/10 text-white/60'
+                    }`}
+                  >
+                    Tech
+                  </button>
+                </div>
+                
+                {loading ? (
+                  <div className="flex justify-center items-center py-4">
+                    <div className="animate-spin w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {myIntents.map(intent => (
+                      <div key={intent.id} className="p-2 glass-morphism rounded-lg">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-white">{intent.title}</span>
+                          <span className="text-xs text-green-400">{intent.matchScore}%</span>
+                        </div>
+                        <p className="text-xs text-white/60">My opportunity</p>
+                      </div>
+                    ))}
+                    
+                    {filteredOtherIntents.slice(0, 3).map(intent => (
+                      <div key={intent.id} className="p-2 glass-morphism rounded-lg">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-white">{intent.title}</span>
+                          <span className="text-xs text-green-400">{intent.matchScore}%</span>
+                        </div>
+                        <p className="text-xs text-white/60">{intent.distance}</p>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-            ))}
+            )}
           </div>
-        )}
-      </div>
-
-      {/* Create Intent Button */}
-      <div className="flex-shrink-0 p-6 border-t border-white/10">
-        <button className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-3 rounded-xl font-medium transition-all shadow-lg hover:shadow-xl border border-blue-500/30">
-          {texts.createIntent}
-        </button>
-      </div>
+        </div>
+      )}
     </div>
   );
 }
+
+const IntentCard = ({ intent, texts, getPriorityColor }: { intent: Intent, texts: any, getPriorityColor: (p:string) => string }) => (
+  <div className="glass-morphism rounded-xl p-4 hover-glow cursor-pointer transition-all">
+    <div className="flex items-start justify-between mb-2">
+      <h4 className="font-medium text-sm text-white flex-1 pr-2">{intent.title}</h4>
+      <div className="flex items-center gap-1">
+        <span className="text-xs text-blue-400">
+          {intent.matchScore}% match
+        </span>
+      </div>
+    </div>
+    
+    <div className="flex items-center gap-2 mb-3">
+      <span className="text-xs text-white/60">Rating:</span>
+      <span className="text-xs text-yellow-400">
+        {Math.round((intent.matchScore / 100) * 5 * 10) / 10}/5
+      </span>
+    </div>
+    
+    <p className="text-xs text-white/60 mb-3 line-clamp-2">
+      {intent.description}
+    </p>
+    
+    <div className="flex gap-2">
+      <button className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs font-medium hover:bg-yellow-500/30 transition-colors">
+        🔔 Notify
+      </button>
+      {intent.isOwn ? (
+        <button className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-medium hover:bg-blue-500/30 transition-colors">
+          ✏️ Edit
+        </button>
+      ) : (
+        <button className="px-3 py-1 bg-green-500/20 text-green-400 rounded text-xs font-medium hover:bg-green-500/30 transition-colors">
+          ✅ Connect
+        </button>
+      )}
+    </div>
+    
+    <div className="flex items-center justify-between text-xs text-white/40 mt-2 pt-2 border-t border-white/10">
+      <div className="flex items-center space-x-1">
+        <MapPin size={12} />
+        <span>{intent.distance}</span>
+      </div>
+      <span>{intent.createdAt}</span>
+    </div>
+  </div>
+);

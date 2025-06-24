@@ -74,9 +74,48 @@ async function initializeUserSession() {
     console.log('✅ User session initialized. Current user:', userToSet.name);
 
   } catch (error) {
-    console.error('❌ Failed to initialize user session:', error);
-    // Fallback to default user if something goes wrong
-    currentUserAtom.set({ ...defaultUser, id: 'error', name: 'Error' });
+    console.warn('⚠️ DB connection failed, using mock user data as fallback:', error);
+
+    const mockLirea: DemoUser = {
+      id: '6f3f3134-dd24-4665-b6cd-f9caf57d859f',
+      name: 'Lirea',
+      email: 'lirea.designer@example.com',
+      avatar: '/images/avatars/lirea.png',
+      country: 'BR',
+      city: 'Rio de Janeiro',
+      timezone: 'America/Sao_Paulo'
+    };
+    const mockMarco: DemoUser = {
+      id: '6376f30a-1ee4-4aa9-bdde-dd9ac0be6f24',
+      name: 'Marco',
+      email: 'marco.manager@fintechrio.com',
+      avatar: '/images/avatars/marco.png',
+      country: 'BR',
+      city: 'Rio de Janeiro',
+      timezone: 'America/Sao_Paulo'
+    };
+    const mockDemoUsers = { lirea: mockLirea, marco: mockMarco };
+    
+    demoUsersAtom.set(mockDemoUsers);
+    console.log('✅ Mock users created due to DB failure:', mockDemoUsers);
+
+    const savedUser = typeof window !== 'undefined' ? localStorage.getItem('ailocks-currentUser') : null;
+    let userToSet = mockLirea;
+    if (savedUser) {
+      const parsedUser = JSON.parse(savedUser);
+      if (parsedUser.name === 'Marco') {
+        userToSet = mockMarco;
+      }
+    }
+    
+    currentUserAtom.set(userToSet);
+    setLocation({
+      country: userToSet.country,
+      city: userToSet.city,
+      timezone: userToSet.timezone,
+      isDefault: false
+    });
+    console.log('✅ User session initialized with mock data. Current user:', userToSet.name);
   }
 }
 

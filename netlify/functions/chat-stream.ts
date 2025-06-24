@@ -1,18 +1,22 @@
-import { chatService } from '../../src/lib/chat-service';
-import { db } from '../../src/lib/db';
-import { intents } from '../../src/lib/schema';
-import { sql } from 'drizzle-orm';
+import type { Handler, HandlerEvent, HandlerContext } from "@netlify/functions";
+import { ChatService } from "../../src/lib/chat-service";
+import { UnifiedAIService } from "../../src/lib/ai-service";
+
+const chatService = new ChatService();
+const aiService = new UnifiedAIService();
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
+};
 
 export default async (request: Request) => {
   // Handle CORS preflight
   if (request.method === 'OPTIONS') {
     return new Response('', {
       status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS'
-      }
+      headers: CORS_HEADERS
     });
   }
 
@@ -21,7 +25,7 @@ export default async (request: Request) => {
       status: 405,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
+        ...CORS_HEADERS
       }
     });
   }
@@ -35,7 +39,7 @@ export default async (request: Request) => {
         status: 400,
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
+          ...CORS_HEADERS
         }
       });
     }
@@ -54,8 +58,7 @@ export default async (request: Request) => {
       useDatabase = true;
     }
     
-    if (!session && userId && isValidUUID) {
-      // Try to create a new session if we have userId and valid UUID
+    if (!session && userId && userId !== 'loading' && userId !== 'error') {
       try {
         console.log('🆕 Creating new session for user:', userId);
         const newSessionId = await chatService.createSession(userId, mode, language);
@@ -95,10 +98,10 @@ export default async (request: Request) => {
       metadata: { location }
     };
 
-    // Save user message to session if using database
+    const userMessageForDb = { ...userMessage, role: 'user' as const };
     if (useDatabase && isValidUUID) {
       console.log('💾 Saving user message to database...');
-      await chatService.saveMessage(sessionId, userMessage);
+      await chatService.saveMessage(sessionId, userMessageForDb);
     } else {
       console.log('⚠️ Skipping database save for fallback session');
     }
@@ -112,9 +115,7 @@ export default async (request: Request) => {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
           'Connection': 'keep-alive',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS'
+          ...CORS_HEADERS
         }
       });
     } else {
@@ -152,7 +153,7 @@ export default async (request: Request) => {
           status: 200,
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            ...CORS_HEADERS
           }
         });
 
@@ -186,7 +187,7 @@ export default async (request: Request) => {
           status: 200,
           headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            ...CORS_HEADERS
           }
         });
       }
@@ -201,7 +202,7 @@ export default async (request: Request) => {
       status: 500,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
+        ...CORS_HEADERS
       }
     });
   }
@@ -520,15 +521,7 @@ function generateNoIntentsResponse(language: string): any {
 }
 
 function extractKeywords(message: string): string[] {
-  // Простое извлечение ключевых слов
-  const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should'];
-  
-  return message
-    .toLowerCase()
-    .replace(/[^\w\s]/g, '')
-    .split(/\s+/)
-    .filter(word => word.length > 2 && !stopWords.includes(word))
-    .slice(0, 10); // Берем первые 10 ключевых слов
+  return message.toLowerCase().match(/\b(\w+)\b/g) || [];
 }
 
 function detectCategory(message: string): string {
@@ -572,7 +565,7 @@ function calculateDistance(userLocation: any, intent: any): string {
 }
 
 function getFallbackResponse(mode: string, language: string = 'en'): string {
-  const fallbacks = {
+  const responses = {
     en: {
       researcher: "I'm your AI assistant Ailock. I help you find collaboration opportunities and analyze market trends. Unfortunately, I'm having trouble accessing the database right now, but I can still assist you with creating new opportunities.",
       creator: "I'm Ailock, your creative AI companion! I help you find collaborators and bring ideas to life. While I'm having some technical difficulties, I can still help you brainstorm and create new opportunities.",
@@ -585,7 +578,7 @@ function getFallbackResponse(mode: string, language: string = 'en'): string {
     }
   };
 
-  const modeResponses = fallbacks[language as keyof typeof fallbacks]?.[mode as keyof typeof fallbacks.en] || fallbacks.en.researcher;
+  const modeResponses = responses[language as keyof typeof responses]?.[mode as keyof typeof responses.en] || responses.en.researcher;
   
   return `${modeResponses}\n\n*Note: Using offline mode - Ailock services may be temporarily unavailable.*`;
 }

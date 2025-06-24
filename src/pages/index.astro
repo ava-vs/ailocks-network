@@ -1,10 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import Header from '../components/Header';
 import ChatInterface from '../components/Chat/ChatInterface';
-import IntentPanel from '../components/Sidebar/IntentPanel';
-import NavigationSidebar from '../components/Sidebar/NavigationSidebar';
-import StatusBar from '../components/StatusBar.tsx';
 
 // Get detected language from edge function
 const detectedLanguage = Astro.request.headers.get('X-Detected-Language') || 'en';
@@ -35,27 +31,8 @@ if (userLocationHeader) {
   <meta name="detected-language" content={detectedLanguage} slot="head" />
   <meta name="user-location" content={JSON.stringify(userLocationData)} slot="head" />
   
-  <div class="flex flex-col h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-    <!-- Header - React Island -->
-    <Header client:load />
-
-    <!-- Main Content -->
-    <div class="flex flex-1 overflow-hidden min-h-0">
-      <!-- Left Navigation Sidebar - React Island -->
-      <NavigationSidebar client:load />
-
-      <!-- Chat Interface - React Island -->
-      <div class="flex-1 min-w-0 overflow-hidden">
-        <ChatInterface client:load />
-      </div>
-
-      <!-- Right Intent Panel - React Island -->
-      <IntentPanel client:load />
-    </div>
-
-    <!-- Dynamic Status Bar - React Island -->
-    <StatusBar client:load />
-  </div>
+  <!-- Chat Interface - React Island -->
+  <ChatInterface client:load />
 </Layout>
 
 <style>
@@ -77,4 +54,3 @@ if (userLocationHeader) {
     width: 6px;
   }
 </style>
-</Layout>

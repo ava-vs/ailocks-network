@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Mic, Bot, AlertCircle, Wifi, WifiOff, Eye, MessageCircle, Copy, Plus, MapPin, TrendingUp, Users, CheckCircle, XCircle, Loader, ArrowRight, BrainCircuit, Search, DraftingCompass } from 'lucide-react';
+import { Send, Paperclip, Mic, Bot, AlertCircle, Eye, MessageCircle, Copy, Plus, MapPin, TrendingUp, Users, CheckCircle, XCircle, Loader, ArrowRight, BrainCircuit, Search, DraftingCompass } from 'lucide-react';
 import { useStore } from '@nanostores/react';
-import { currentMode, currentLanguage, userLocation } from '../../lib/store';
+import { appState, setMode, setLanguage, type AIMode, type Language } from '../../lib/store';
 import { useUserSession } from '../../hooks/useUserSession';
+import { useLocation } from '../../hooks/useLocation';
 import MessageBubble from './MessageBubble';
 import ContextActions from './ContextActions';
 import IntentPreview from './IntentPreview';
@@ -53,10 +54,11 @@ interface IntentPreviewData {
 }
 
 export default function ChatInterface() {
-  const mode = useStore(currentMode);
-  const language = useStore(currentLanguage);
-  const location = useStore(userLocation);
-  const { currentUser, demoUsers } = useUserSession();
+  const state = useStore(appState);
+  const { activeMode: mode, language } = state;
+
+  const { currentUser, demoUsers, isHydrated, isLoading: isUserLoading } = useUserSession();
+  const location = useLocation();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -77,12 +79,14 @@ export default function ChatInterface() {
   const [ailockProfile, setAilockProfile] = useState<FullAilockProfile | null>(null);
   const [levelUpInfo, setLevelUpInfo] = useState<{ newLevel: number, skillPointsGained: number, xpGained: number } | null>(null);
   const [isLevelUpModalOpen, setIsLevelUpModalOpen] = useState(false);
+  const [newLevelInfo, setNewLevelInfo] = useState({ level: 0, xp: 0, skillPoints: 0 });
+  const [isAilockHealthy, setIsAilockHealthy] = useState(true);
   
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const bottomOfMessagesRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    bottomOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
@@ -570,11 +574,9 @@ export default function ChatInterface() {
     const texts: Record<string, Record<string, string>> = {
       en: {
         welcome: "Hello! I'm Ailock, your personal AI assistant.",
-        help: "I help you find collaboration opportunities, analyze markets, and connect with the right people. Ask me anything!"
       },
       ru: {
         welcome: "Привет! Я Айлок, ваш персональный ИИ-помощник.",
-        help: "Я помогаю находить возможности для сотрудничества, анализировать рынки и связываться с нужными людьми. Спрашивайте что угодно!"
       }
     };
 
@@ -622,41 +624,7 @@ export default function ChatInterface() {
     return `${randomResponse}\n\n*Note: Using offline mode - Ailock services may be temporarily unavailable.*`;
   };
 
-  const getConnectionStatusIcon = () => {
-    switch (connectionStatus) {
-      case 'connected': return <Wifi className="w-4 h-4 text-emerald-400" />;
-      case 'connecting': return <Wifi className="w-4 h-4 text-yellow-400 animate-pulse" />;
-      case 'disconnected': return <WifiOff className="w-4 h-4 text-red-400" />;
-    }
-  };
 
-  const getAilockStatusText = () => {
-    switch (ailockStatus) {
-      case 'available': return 'Ailock Connected';
-      case 'unavailable': return 'Ailock Offline';
-      case 'unknown': return 'Checking Ailock...';
-    }
-  };
-
-  const getAilockStatusColor = () => {
-    switch (ailockStatus) {
-      case 'available': return 'text-emerald-400';
-      case 'unavailable': return 'text-red-400';
-      case 'unknown': return 'text-yellow-400';
-    }
-  };
-
-  const getSessionStatusText = () => {
-    if (connectionStatus === 'connected' && ailockStatus === 'available') {
-      return 'Live Mode';
-    } else if (connectionStatus === 'connected' && ailockStatus === 'unavailable') {
-      return 'Offline Mode';
-    } else if (connectionStatus === 'connecting') {
-      return 'Connecting...';
-    } else {
-      return 'Offline Mode';
-    }
-  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -705,42 +673,18 @@ export default function ChatInterface() {
     }
   };
 
+  const handleModeChange = (newMode: AIMode) => {
+    setMode(newMode);
+    setInput('');
+  };
+
+  const handleLanguageChange = (newLang: Language) => {
+    setLanguage(newLang);
+    setInput('');
+  };
+
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-slate-900/95 to-slate-800/95 backdrop-blur-xl">
-      {/* Connection Status Bar */}
-      <div className="flex-shrink-0 px-6 py-2 border-b border-white/10 bg-white/5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            {getConnectionStatusIcon()}
-            <span className="text-xs text-white/70">
-              {getSessionStatusText()}
-            </span>
-            <span className="text-xs text-white/50">•</span>
-            <span className={`text-xs ${getAilockStatusColor()}`}>
-              {getAilockStatusText()}
-            </span>
-            <span className="text-xs text-white/50">•</span>
-            <span className="text-xs text-white/60">
-              User: {currentUser.name}
-            </span>
-            {isPersistentSession && (
-              <>
-                <span className="text-xs text-white/50">•</span>
-                <span className="text-xs text-emerald-400">
-                  💾 History Saved
-                </span>
-              </>
-            )}
-          </div>
-          {error && (
-            <div className="flex items-center space-x-2 text-amber-400">
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-xs">{error}</span>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto min-h-0 p-6">
         {messages.length === 0 ? (
@@ -749,9 +693,9 @@ export default function ChatInterface() {
               {/* AI Character Image */}
               <div className="w-32 h-32 mx-auto mb-8 relative">
                 <img 
-                  src="/api/placeholder/120/120" 
+                  src="/images/ailock-character.png" 
                   alt="Ailock AI Assistant"
-                  className="w-full h-full object-contain filter drop-shadow-2xl"
+                  className="w-full h-full object-contain animate-float"
                   style={{
                     filter: 'drop-shadow(0 20px 40px rgba(79, 70, 229, 0.3))'
                   }}
@@ -767,9 +711,6 @@ export default function ChatInterface() {
               </p>
               <p className="text-white/60 text-base leading-relaxed">
                 {getModeDescription(mode)}
-              </p>
-              <p className="text-white/60 text-base leading-relaxed mt-6">
-                {getWelcomeText().help}
               </p>
               
               {/* Chat History Status */}
@@ -904,7 +845,7 @@ export default function ChatInterface() {
                 </div>
               </div>
             )}
-            <div ref={messagesEndRef} />
+            <div ref={bottomOfMessagesRef} />
           </div>
         )}
       </div>

@@ -1,0 +1,106 @@
+import { useState, useEffect } from 'react';
+import { useUserSession } from '@/hooks/useUserSession';
+import { ailockApi } from '@/lib/ailock/api';
+import type { FullAilockProfile } from '@/lib/ailock/core';
+import AilockQuickStatus from './AilockQuickStatus';
+
+export default function AilockHeaderWidget() {
+  const { currentUser } = useUserSession();
+  const [profile, setProfile] = useState<FullAilockProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isQuickStatusOpen, setIsQuickStatusOpen] = useState(false);
+
+  useEffect(() => {
+    if (currentUser.id && currentUser.id !== 'loading') {
+      loadProfile();
+    }
+  }, [currentUser.id]);
+
+  const loadProfile = async () => {
+    try {
+      setLoading(true);
+      const ailockProfile = await ailockApi.getProfile(currentUser.id);
+      setProfile(ailockProfile);
+    } catch (error) {
+      console.error('Failed to load Ailock profile for header:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading || !profile) {
+    return (
+      <div className="flex items-center space-x-3">
+        <div className="w-10 h-10 bg-white/5 rounded-lg animate-pulse" />
+        <div className="w-32 h-6 bg-white/5 rounded animate-pulse" />
+      </div>
+    );
+  }
+
+  const xpForNextLevel = profile.level < 20 ? [100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950, 6750, 7600, 8500, 9450, 10450, 11500][profile.level - 1] || 11500 : 11500;
+  const currentLevelXp = profile.level > 1 ? [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950, 6750, 7600, 8500, 9450, 10450][profile.level - 2] || 0 : 0;
+  const progressXp = profile.xp - currentLevelXp;
+  const requiredXp = xpForNextLevel - currentLevelXp;
+  const xpPercentage = Math.min((progressXp / requiredXp) * 100, 100);
+
+  const getAvatarGradient = () => {
+    if (profile.level >= 15) return 'from-purple-400 via-pink-400 to-yellow-400';
+    if (profile.level >= 10) return 'from-blue-400 via-purple-400 to-pink-400';
+    if (profile.level >= 5) return 'from-green-400 via-blue-400 to-purple-400';
+          return 'from-cyan-400 via-blue-400 to-indigo-400';
+    };
+
+    const handleOpenFullProfile = () => {
+      window.location.href = '/my-ailock';
+    };
+
+    return (
+      <>
+        <button 
+          onClick={() => setIsQuickStatusOpen(true)}
+          className="flex items-center space-x-3 hover:bg-white/10 rounded-lg p-2 transition-colors cursor-pointer border border-white/20"
+        >
+          {/* Avatar */}
+          <div className="relative">
+            <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getAvatarGradient()} p-0.5`}>
+              <div className="w-full h-full rounded-lg bg-slate-800/90 flex items-center justify-center">
+                <img 
+                  src="/images/ailock-avatar.png" 
+                  alt="Ailock Avatar" 
+                  className="w-8 h-8 object-contain animate-breathe"
+                />
+              </div>
+            </div>
+            {/* Level badge */}
+            <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+              {profile.level}
+            </div>
+          </div>
+
+          {/* Info */}
+          <div className="flex flex-col">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium text-white/90">{profile.name}</span>
+              <span className="text-xs text-white/60">Level {profile.level}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-24 bg-white/10 rounded-full h-1.5 overflow-hidden" title={`${progressXp}/${requiredXp} XP`}>
+                <div 
+                  className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-500"
+                  style={{ width: `${xpPercentage}%` }}
+                ></div>
+              </div>
+              <span className="text-xs text-white/50">{profile.xp} XP</span>
+            </div>
+          </div>
+        </button>
+
+        <AilockQuickStatus
+          isOpen={isQuickStatusOpen}
+          onClose={() => setIsQuickStatusOpen(false)}
+          profile={profile}
+          onOpenFullProfile={handleOpenFullProfile}
+        />
+      </>
+    );
+  }  

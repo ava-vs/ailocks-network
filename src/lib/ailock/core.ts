@@ -339,8 +339,8 @@ export class AilockService {
     const totalMessages = await db.select({ value: count() }).from(chatSessions).where(eq(chatSessions.userId, ailockId));
     return (totalIntents[0]?.value || 0) + (totalMessages[0]?.value || 0);
   }
-  
-  private async checkAchievements(ailockId: string): Promise<AilockAchievement[]> {
+
+  private async checkAchievements(_ailockId: string): Promise<AilockAchievement[]> {
     // TODO: Implement achievement checking logic based on events and profile stats
     // For now, returning an empty array.
     // Example: Check if user created 10 intents, unlocked a skill branch, etc.
