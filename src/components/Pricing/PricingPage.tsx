@@ -73,7 +73,7 @@ export default function PricingPage() {
               '2,000 AI queries per month',
               'Semantic search with embeddings',
               'Smart chain decomposition',
-              'Voice chat interface',
+              'Voice Agent Interface (ElevenLabs)',
               'Priority AI models (GPT-4, Claude)',
               'Advanced analytics',
               'Email support',
@@ -86,7 +86,7 @@ export default function PricingPage() {
             features: [
               'Unlimited AI queries',
               'All premium AI models',
-              'Video chat interface',
+              'Video Agent Interface (Talvus)',
               'Better custom AI training',
               'White-label solution',
               'Dedicated account manager',
@@ -151,6 +151,7 @@ export default function PricingPage() {
               '2,000 запросов к ИИ в месяц',
               'Семантический поиск с эмбеддингами',
               'Умная декомпозиция цепочек',
+              'Голосовой интерфейс (ElevenLabs)'
               'Приоритетные модели ИИ (GPT-4, Claude)',
               'Расширенная аналитика',
               'Поддержка по электронной почте',
@@ -163,6 +164,7 @@ export default function PricingPage() {
             features: [
               'Неограниченные запросы к ИИ',
               'Все премиум модели ИИ',
+              'Видео-интерфейс агента (Talvus)'
               'Пользовательское обучение ИИ',
               'White-label решение',
               'Выделенный менеджер аккаунта',
