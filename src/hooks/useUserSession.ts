@@ -81,7 +81,7 @@ async function initializeUserSession() {
 }
 
 // Initialize session once when the module is loaded
-initializeUserSession();
+// initializeUserSession(); // <-- REMOVED: This causes SSR errors. Initialization will be moved to the hook.
 
 export function useUserSession() {
   const user = useStore(currentUserAtom);
@@ -89,6 +89,10 @@ export function useUserSession() {
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
+    // Moved initialization logic here to ensure it runs only on the client
+    if (!isInitialized) {
+      initializeUserSession();
+    }
     setIsHydrated(true);
   }, []);
 
