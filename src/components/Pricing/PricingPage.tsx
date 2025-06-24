@@ -73,6 +73,7 @@ export default function PricingPage() {
               '2,000 AI queries per month',
               'Semantic search with embeddings',
               'Smart chain decomposition',
+              'Voice chat interface',
               'Priority AI models (GPT-4, Claude)',
               'Advanced analytics',
               'Email support',
@@ -80,12 +81,13 @@ export default function PricingPage() {
             ]
           },
           enterprise: {
-            name: 'Enterprise',
+            name: 'Premium',
             description: 'Full-scale solution for organizations',
             features: [
               'Unlimited AI queries',
               'All premium AI models',
-              'Custom AI training',
+              'Video chat interface',
+              'Better custom AI training',
               'White-label solution',
               'Dedicated account manager',
               'SLA guarantee',
