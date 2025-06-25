@@ -1,211 +1,184 @@
-import { useStore } from '@nanostores/react';
-import { currentLanguage } from '../lib/store';
 import { useState, useEffect } from 'react';
-
-interface SystemStatus {
-  database: 'connected' | 'error' | 'loading';
-  aiService: 'available' | 'unavailable' | 'loading';
-  embedding: 'healthy' | 'error' | 'loading';
-  coverage?: number;
-  lastChecked?: string;
-}
+import { useStore } from '@nanostores/react';
+import { appState, setMode, setLanguage } from '@/lib/store';
+import { useLocation } from '@/hooks/useLocation';
+import { Bot, Zap, Globe, MapPin, Database, AlertCircle } from 'lucide-react';
 
 export default function StatusBar() {
-  const language = useStore(currentLanguage);
-  const [systemStatus, setSystemStatus] = useState<SystemStatus>({
-    database: 'loading',
-    aiService: 'loading',
-    embedding: 'loading'
-  });
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { activeMode, language } = useStore(appState);
+  const location = useLocation();
+  const [dbStatus, setDbStatus] = useState<'connected' | 'error' | 'loading'>('loading');
+  const [aiStatus, setAiStatus] = useState<'available' | 'unavailable' | 'loading'>('loading');
 
   useEffect(() => {
-    checkSystemHealth();
-    // Check health every 30 seconds
-    const interval = setInterval(checkSystemHealth, 30000);
-    
-    // Listen for user changes to refresh system status
-    const handleUserChanged = () => {
-      checkSystemHealth();
-    };
-    
-    window.addEventListener('userChanged', handleUserChanged);
-    
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('userChanged', handleUserChanged);
-    };
-  }, []);
-
-  const checkSystemHealth = async () => {
-    setIsRefreshing(true);
-    try {
-      const [dbResponse, aiResponse, embeddingResponse] = await Promise.all([
-        fetch('/.netlify/functions/db-status').catch(() => ({ ok: false, json: () => ({ database: 'error' }) })),
-        fetch('/.netlify/functions/ai-health-check').catch(() => ({ ok: false, json: () => ({ status: 'error' }) })),
-        fetch('/.netlify/functions/embedding-health').catch(() => ({ ok: false, json: () => ({ status: 'error' }) }))
-      ]);
-
-      const [dbData, aiData, embeddingData] = await Promise.all([
-        dbResponse.json(),
-        aiResponse.json(), 
-        embeddingResponse.json()
-      ]);
-
-      setSystemStatus({
-        database: dbData.database === 'connected' ? 'connected' : 'error',
-        aiService: aiData.status === 'ok' && aiData.testResponse === 'success' ? 'available' : 'unavailable',
-        embedding: embeddingData.status === 'healthy' ? 'healthy' : 'error',
-        coverage: embeddingData.embeddingCoverage?.coverage || 0,
-        lastChecked: new Date().toLocaleTimeString()
-      });
-    } catch (error) {
-      console.error('Failed to check system health:', error);
-      setSystemStatus({
-        database: 'error',
-        aiService: 'unavailable', 
-        embedding: 'error',
-        lastChecked: new Date().toLocaleTimeString()
-      });
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  const handleManualRefresh = () => {
-    if (!isRefreshing) {
-      checkSystemHealth();
-    }
-  };
-
-  const getTexts = () => {
-    const texts = {
-      en: {
-        multiModelAI: 'Multi-Model AI',
-        secureConnection: 'Secure Connection',
-        version: 'Ailocks v1.0 • Ai2Ai Network',
-        builtOnBolt: 'Built on Bolt',
-        databaseConnected: 'Database',
-        embeddingService: 'Vector Search',
-        loading: 'Loading...',
-        connected: 'Connected',
-        available: 'Available',
-        unavailable: 'Unavailable',
-        error: 'Error',
-        healthy: 'Healthy',
-        refreshing: 'Refreshing...',
-        clickToRefresh: 'Click to refresh'
-      },
-      ru: {
-        multiModelAI: 'Мульти-модельный ИИ',
-        secureConnection: 'Безопасное соединение',
-        version: 'Ailocks v1.0 • Ai2Ai Network',
-        builtOnBolt: 'Создано на Bolt',
-        databaseConnected: 'База данных',
-        embeddingService: 'Векторный поиск',
-        loading: 'Загрузка...',
-        connected: 'Подключено',
-        available: 'Доступен',
-        unavailable: 'Недоступен',
-        error: 'Ошибка',
-        healthy: 'Работает',
-        refreshing: 'Обновление...',
-        clickToRefresh: 'Нажмите для обновления'
+    // Check database status
+    const checkDbStatus = async () => {
+      try {
+        const response = await fetch('/.netlify/functions/db-status');
+        if (response.ok) {
+          const data = await response.json();
+          setDbStatus(data.database === 'connected' ? 'connected' : 'error');
+        } else {
+          setDbStatus('error');
+        }
+      } catch (error) {
+        console.error('Failed to check database status:', error);
+        setDbStatus('error');
       }
     };
-    return texts[language as keyof typeof texts] || texts.en;
+
+    // Check AI service status
+    const checkAiStatus = async () => {
+      try {
+        const response = await fetch('/.netlify/functions/ai-health-check');
+        if (response.ok) {
+          const data = await response.json();
+          setAiStatus(data.status === 'ok' ? 'available' : 'unavailable');
+        } else {
+          setAiStatus('unavailable');
+        }
+      } catch (error) {
+        console.error('Failed to check AI service status:', error);
+        setAiStatus('unavailable');
+      }
+    };
+
+    checkDbStatus();
+    checkAiStatus();
+  }, []);
+
+  const handleModeChange = (mode: string) => {
+    setMode(mode as any);
   };
 
-  const texts = getTexts();
-
-  const getStatusInfo = (status: string, label: string) => {
-    if (isRefreshing && status !== 'loading') {
-      return {
-        color: 'bg-yellow-400',
-        text: `${label} (${texts.refreshing})`,
-        animate: 'animate-pulse'
-      };
-    }
-
-    switch (status) {
-      case 'connected':
-      case 'available':
-      case 'healthy':
-        return {
-          color: 'bg-emerald-400',
-          text: label,
-          animate: 'animate-pulse'
-        };
-      case 'loading':
-        return {
-          color: 'bg-yellow-400',
-          text: `${label} (${texts.loading})`,
-          animate: 'animate-pulse'
-        };
-      case 'error':
-      case 'unavailable':
-        return {
-          color: 'bg-red-400',
-          text: `${label} (${status === 'error' ? texts.error : texts.unavailable})`,
-          animate: ''
-        };
-      default:
-        return {
-          color: 'bg-gray-400',
-          text: label,
-          animate: ''
-        };
-    }
+  const handleLanguageChange = (lang: string) => {
+    setLanguage(lang as any);
   };
-
-  const dbInfo = getStatusInfo(systemStatus.database, `💾 ${texts.databaseConnected}`);
-  const aiInfo = getStatusInfo(systemStatus.aiService, `⚡ ${texts.multiModelAI}`);
-  const embeddingInfo = getStatusInfo(systemStatus.embedding, `🔍 ${texts.embeddingService}`);
 
   return (
-    <div className="bg-gradient-to-r from-slate-900/95 to-slate-800/95 backdrop-blur-xl border-t border-white/10 px-6 py-3 flex-shrink-0">
-      <div className="flex items-center justify-between text-xs">
-        <div 
-          className="flex items-center space-x-6 text-white/60 cursor-pointer hover:text-white/80 transition-colors"
-          onClick={handleManualRefresh}
-          title={`${texts.clickToRefresh}${systemStatus.lastChecked ? ` • Last checked: ${systemStatus.lastChecked}` : ''}`}
-        >
-          <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 ${dbInfo.color} rounded-full ${dbInfo.animate}`}></div>
-            <span>{dbInfo.text}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 ${aiInfo.color} rounded-full ${aiInfo.animate}`}></div>
-            <span>{aiInfo.text}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className={`w-2 h-2 ${embeddingInfo.color} rounded-full ${embeddingInfo.animate}`}></div>
-            <span>
-              {embeddingInfo.text}
-              {systemStatus.embedding === 'healthy' && systemStatus.coverage !== undefined && 
-                ` (${systemStatus.coverage}%)`
-              }
+    <div className="bg-[rgba(26,31,46,0.8)] backdrop-blur-[10px] border border-white/10 rounded-xl px-4 py-2 flex items-center justify-between">
+      {/* Left: Mode Selector */}
+      <div className="flex items-center space-x-1">
+        <div className="flex items-center space-x-1 bg-slate-800/80 rounded-lg p-1">
+          <button
+            onClick={() => handleModeChange('researcher')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              activeMode === 'researcher'
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <div className="flex items-center space-x-1">
+              <Bot className="w-3 h-3" />
+              <span>Researcher</span>
+            </div>
+          </button>
+          <button
+            onClick={() => handleModeChange('creator')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              activeMode === 'creator'
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <div className="flex items-center space-x-1">
+              <Zap className="w-3 h-3" />
+              <span>Creator</span>
+            </div>
+          </button>
+          <button
+            onClick={() => handleModeChange('analyst')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              activeMode === 'analyst'
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <div className="flex items-center space-x-1">
+              <Bot className="w-3 h-3" />
+              <span>Analyst</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* Center: Status Indicators */}
+      <div className="hidden md:flex items-center space-x-4">
+        {/* Database Status */}
+        <div className="flex items-center space-x-1 text-xs">
+          <Database className="w-3 h-3" />
+          <span className="text-white/60">Database:</span>
+          <div className="flex items-center space-x-1">
+            <div className={`w-1.5 h-1.5 rounded-full ${
+              dbStatus === 'connected' ? 'bg-green-400' : 
+              dbStatus === 'error' ? 'bg-red-400' : 'bg-yellow-400'
+            }`}></div>
+            <span className={
+              dbStatus === 'connected' ? 'text-green-400' : 
+              dbStatus === 'error' ? 'text-red-400' : 'text-yellow-400'
+            }>
+              {dbStatus === 'connected' ? 'Connected' : 
+               dbStatus === 'error' ? 'Error' : 'Connecting...'}
             </span>
           </div>
-          {systemStatus.lastChecked && (
-            <div className="text-white/40 text-xs">
-              • {systemStatus.lastChecked}
-            </div>
-          )}
         </div>
-        <div className="flex items-center space-x-4 text-white/40">
-          <span>{texts.version}</span>
-          <a 
-            href="https://bolt.new" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center space-x-2 px-3 py-1 bg-gradient-to-r from-blue-500/20 to-indigo-600/20 border border-blue-500/30 rounded-lg hover:from-blue-500/30 hover:to-indigo-600/30 transition-all duration-200 group"
+
+        {/* AI Status */}
+        <div className="flex items-center space-x-1 text-xs">
+          <Bot className="w-3 h-3" />
+          <span className="text-white/60">AI Service:</span>
+          <div className="flex items-center space-x-1">
+            <div className={`w-1.5 h-1.5 rounded-full ${
+              aiStatus === 'available' ? 'bg-green-400' : 
+              aiStatus === 'unavailable' ? 'bg-red-400' : 'bg-yellow-400'
+            }`}></div>
+            <span className={
+              aiStatus === 'available' ? 'text-green-400' : 
+              aiStatus === 'unavailable' ? 'text-red-400' : 'text-yellow-400'
+            }>
+              {aiStatus === 'available' ? 'Available' : 
+               aiStatus === 'unavailable' ? 'Unavailable' : 'Checking...'}
+            </span>
+          </div>
+        </div>
+
+        {/* Location */}
+        <div className="flex items-center space-x-1 text-xs">
+          <MapPin className="w-3 h-3" />
+          <span className="text-white/60">Location:</span>
+          <span className="text-white/80">{location.city}, {location.country}</span>
+        </div>
+      </div>
+
+      {/* Right: Language Selector */}
+      <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 bg-slate-800/80 rounded-lg p-1">
+          <button
+            onClick={() => handleLanguageChange('en')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              language === 'en'
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
           >
-            <div className="w-4 h-4 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-sm flex items-center justify-center">
-              <span className="text-white text-xs font-bold">⚡</span>
+            <div className="flex items-center space-x-1">
+              <Globe className="w-3 h-3" />
+              <span>EN</span>
             </div>
-            <span className="text-blue-400 group-hover:text-blue-300 font-medium">{texts.builtOnBolt}</span>
-          </a>
+          </button>
+          <button
+            onClick={() => handleLanguageChange('ru')}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              language === 'ru'
+                ? 'bg-blue-500/20 text-blue-400'
+                : 'text-white/60 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <div className="flex items-center space-x-1">
+              <Globe className="w-3 h-3" />
+              <span>RU</span>
+            </div>
+          </button>
         </div>
       </div>
     </div>

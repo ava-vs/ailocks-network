@@ -1,7 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Menu, ChevronDown, Zap, MapPin, Globe } from 'lucide-react';
-import AilockHeaderWidget from '@/components/Ailock/AilockHeaderWidget';
-import UserHeaderInfo from '@/components/Header/UserHeaderInfo';
 import { toggleMobileMenu } from '@/lib/store';
 import { useUserSession } from '@/hooks/useUserSession';
 import { useLocation } from '@/hooks/useLocation';
@@ -9,12 +7,90 @@ import { useLocation } from '@/hooks/useLocation';
 export default function Header() {
   const { currentUser, switchUser, isLirea, demoUsersLoaded } = useUserSession();
   const location = useLocation();
+  const [isAilockDropdownOpen, setIsAilockDropdownOpen] = useState(false);
+
+  const AilockDropdown = () => (
+    <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-80 bg-slate-800/95 backdrop-blur-xl border border-blue-500 rounded-2xl p-5 shadow-2xl z-50">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
+        <img 
+          src="/images/ailock-avatar.png" 
+          alt="Ailock Avatar" 
+          className="w-8 h-8"
+        />
+        <div>
+          <h3 className="text-white font-medium">Ailock Assistant</h3>
+          <p className="text-sm text-gray-400">Quick Status</p>
+        </div>
+      </div>
+      
+      {/* Level Progress */}
+      <div className="mb-4">
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-white">Level Progress</span>
+          <span className="bg-blue-500 px-2 py-1 rounded text-xs text-white">Level 1</span>
+        </div>
+        <div className="w-full bg-gray-700 rounded-full h-2">
+          <div className="bg-gradient-to-r from-blue-400 to-blue-600 h-2 rounded-full" 
+               style={{width: '81%'}}></div>
+        </div>
+        <p className="text-xs text-gray-400 mt-1">2,850 / 3,500 XP | 650 XP to next level</p>
+      </div>
+      
+      {/* Tasks */}
+      <div className="mb-4">
+        <h4 className="text-white mb-2">Today's Task</h4>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between p-2 bg-slate-700/50 rounded">
+            <div className="flex items-center gap-2">
+              <span className="text-green-500">✅</span>
+              <span className="text-sm text-white">Analyze market trends</span>
+            </div>
+            <span className="text-xs text-green-500">50 XP</span>
+          </div>
+          <div className="flex items-center justify-between p-2 bg-slate-700/50 rounded">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400">⏳</span>
+              <span className="text-sm text-white">Process user queries</span>
+            </div>
+            <span className="text-xs text-blue-400">100 XP</span>
+          </div>
+          <div className="flex items-center justify-between p-2 bg-slate-700/50 rounded">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-400">⏳</span>
+              <span className="text-sm text-white">Generate insights</span>
+            </div>
+            <span className="text-xs text-blue-400">75 XP</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Buttons */}
+      <div className="flex gap-2">
+        <button 
+          onClick={() => setIsAilockDropdownOpen(false)}
+          className="flex-1 py-2 border border-gray-600 rounded-lg text-white hover:bg-gray-700 transition-colors"
+        >
+          Close
+        </button>
+        <button 
+          onClick={() => {
+            setIsAilockDropdownOpen(false);
+            window.location.href = '/my-ailock';
+          }}
+          className="flex-1 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white transition-colors"
+        >
+          Full Profile
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[1000] h-[60px] bg-[rgba(26,31,46,0.95)] backdrop-blur-[20px] border-b border-white/10">
-      <div className="flex items-center justify-between h-full px-5">
+      <div className="grid grid-cols-3 h-full px-5 items-center">
         {/* Left Section - Logo & Brand */}
-        <div className="flex items-center gap-3 flex-1">
+        <div className="flex items-center gap-3 justify-self-start">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
             <img 
               src="/images/ailock-logo.png" 
@@ -29,8 +105,11 @@ export default function Header() {
         </div>
 
         {/* Center Section - Ailock Assistant Card */}
-        <div className="hidden md:flex justify-center flex-1">
-          <button className="w-[280px] h-[44px] bg-gradient-to-br from-[#1a1f2e] to-[#252b3a] border border-[#4a9eff] rounded-xl px-4 flex items-center gap-3 hover:transform hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(74,158,255,0.3)] transition-all duration-300 cursor-pointer">
+        <div className="justify-self-center relative">
+          <button 
+            onClick={() => setIsAilockDropdownOpen(!isAilockDropdownOpen)}
+            className="w-[280px] h-[44px] bg-gradient-to-br from-[#1a1f2e] to-[#252b3a] border border-[#4a9eff] rounded-xl px-4 flex items-center gap-3 hover:transform hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(74,158,255,0.3)] transition-all duration-300 cursor-pointer"
+          >
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 via-blue-400 to-indigo-400 p-0.5">
               <div className="w-full h-full rounded-lg bg-slate-800/90 flex items-center justify-center">
                 <img 
@@ -46,10 +125,12 @@ export default function Header() {
             </div>
             <ChevronDown className="w-4 h-4 text-white/60" />
           </button>
+          
+          {isAilockDropdownOpen && <AilockDropdown />}
         </div>
 
         {/* Right Section - User Info & Controls */}
-        <div className="hidden lg:flex items-center gap-4 flex-1 justify-end">
+        <div className="hidden lg:flex items-center gap-4 justify-self-end">
           {/* Role Indicator */}
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-green-400 rounded-full"></div>
@@ -97,7 +178,7 @@ export default function Header() {
         </div>
 
         {/* Mobile Menu Button */}
-        <div className="md:hidden">
+        <div className="md:hidden justify-self-end">
           <button 
             onClick={toggleMobileMenu}
             className="p-2 rounded-md text-white/70 hover:text-white hover:bg-white/10 transition-colors"

@@ -26,6 +26,7 @@ function useMediaQuery(query: string) {
 
 export default function CollapsibleSidebar({ children, side }: CollapsibleSidebarProps) {
   const [isHoverExpanded, setIsHoverExpanded] = useState(false);
+  const [isRightPanelExpanded, setIsRightPanelExpanded] = useState(false);
   const { isMobileMenuOpen } = useStore(appState);
   const isMobile = useMediaQuery('(max-width: 768px)');
 
@@ -62,24 +63,36 @@ export default function CollapsibleSidebar({ children, side }: CollapsibleSideba
     );
   }
 
-  const isExpanded = isHoverExpanded;
+  // For right sidebar, use state-controlled expansion
+  const isExpanded = side === 'right' ? isRightPanelExpanded : isHoverExpanded;
+  
   const sidebarClasses = cn(
     'fixed top-[60px] h-[calc(100vh-60px)] z-40 transition-all duration-300 ease-in-out',
     'bg-[rgba(26,31,46,0.9)] backdrop-blur-[20px]',
     side === 'left' ? 'left-0 border-r border-white/10' : 'right-0 border-l border-white/10',
-    isExpanded ? 'w-[220px]' : 'w-[60px]'
+    side === 'right' 
+      ? (isExpanded ? 'w-[450px]' : 'w-[60px]')
+      : (isExpanded ? 'w-[220px]' : 'w-[60px]')
   );
+
+  const handleMouseEvents = side === 'left' ? {
+    onMouseEnter: () => setIsHoverExpanded(true),
+    onMouseLeave: () => setIsHoverExpanded(false)
+  } : {};
 
   return (
     <div
       className={sidebarClasses}
-      onMouseEnter={() => setIsHoverExpanded(true)}
-      onMouseLeave={() => setIsHoverExpanded(false)}
+      {...handleMouseEvents}
     >
       <div className="h-full overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
         {React.Children.map(children, child => {
           if (React.isValidElement(child)) {
-            return React.cloneElement(child, { isExpanded } as React.Attributes & { isExpanded: boolean });
+            const props = { isExpanded } as React.Attributes & { isExpanded: boolean };
+            if (side === 'right') {
+              (props as any).setIsRightPanelExpanded = setIsRightPanelExpanded;
+            }
+            return React.cloneElement(child, props);
           }
           return child;
         })}

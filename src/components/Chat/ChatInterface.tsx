@@ -611,7 +611,7 @@ export default function ChatInterface() {
         if (result.success) {
             toast.success(`+${result.xpGained} XP`, { duration: 1500, icon: '✨' });
             
-            setAilockProfile(prev => prev ? {...prev, xp: result.newXp} : null);
+            setAilockProfile(prev => prev ? {...prev, xp: result.new_xp} : null);
 
             if (result.leveledUp) {
                 setLevelUpInfo({
