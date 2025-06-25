@@ -71,7 +71,7 @@ export default function CollapsibleSidebar({ children, side }: CollapsibleSideba
     'bg-[rgba(26,31,46,0.9)] backdrop-blur-[20px]',
     side === 'left' ? 'left-0 border-r border-white/10' : 'right-0 border-l border-white/10',
     side === 'right' 
-      ? (isExpanded ? 'w-[450px]' : 'w-[60px]')
+      ? (isExpanded ? 'w-[350px]' : 'w-[60px]')
       : (isExpanded ? 'w-[220px]' : 'w-[60px]')
   );
 

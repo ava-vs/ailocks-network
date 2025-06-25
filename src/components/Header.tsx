@@ -16,7 +16,8 @@ export default function Header() {
         <img 
           src="/images/ailock-avatar.png" 
           alt="Ailock Avatar" 
-          className="w-8 h-8"
+          className="w-8 h-8 object-contain"
+          style={{border: 'none', outline: 'none'}}
         />
         <div>
           <h3 className="text-white font-medium">Ailock Assistant</h3>
@@ -88,42 +89,44 @@ export default function Header() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[1000] h-[60px] bg-[rgba(26,31,46,0.95)] backdrop-blur-[20px] border-b border-white/10">
-      <div className="grid grid-cols-3 h-full px-5 items-center">
+      <div className="grid grid-cols-[1fr_auto_1fr] h-full px-5 items-center">
         {/* Left Section - Logo & Brand */}
         <div className="flex items-center gap-3 justify-self-start">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-            <img 
-              src="/images/ailock-logo.png" 
-              alt="Ailock Logo" 
-              className="w-6 h-6"
-            />
-          </div>
+          <img 
+            src="/images/ailock-logo.png" 
+            alt="Ailocks Logo" 
+            className="w-8 h-8 object-contain"
+            style={{border: 'none', background: 'none', outline: 'none'}}
+          />
           <div className="flex flex-col">
             <span className="text-[18px] font-semibold text-white leading-tight">Ailocks</span>
             <span className="text-[12px] font-normal text-white/70 leading-tight">Ai2Ai Network</span>
           </div>
         </div>
 
-        {/* Center Section - Ailock Assistant Card */}
+        {/* Center Section - Ailock Assistant Card with Progress */}
         <div className="justify-self-center relative">
           <button 
             onClick={() => setIsAilockDropdownOpen(!isAilockDropdownOpen)}
-            className="w-[280px] h-[44px] bg-gradient-to-br from-[#1a1f2e] to-[#252b3a] border border-[#4a9eff] rounded-xl px-4 flex items-center gap-3 hover:transform hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(74,158,255,0.3)] transition-all duration-300 cursor-pointer"
+            className="flex items-center gap-3 px-4 py-2 bg-slate-700/50 border border-blue-500 rounded-xl hover:bg-slate-600/50 transition-all"
           >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 via-blue-400 to-indigo-400 p-0.5">
-              <div className="w-full h-full rounded-lg bg-slate-800/90 flex items-center justify-center">
-                <img 
-                  src="/images/ailock-avatar.png" 
-                  alt="Ailock Avatar" 
-                  className="w-5 h-5"
-                />
+            <img 
+              src="/images/ailock-avatar.png" 
+              alt="Ailock Avatar" 
+              className="w-8 h-8 object-contain"
+              style={{border: 'none', outline: 'none'}}
+            />
+            <div className="flex flex-col items-start">
+              <span className="text-white font-medium text-sm">Ailock Assistant</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">Level 1</span>
+                <div className="w-16 h-1 bg-gray-600 rounded-full">
+                  <div className="w-3/4 h-1 bg-blue-500 rounded-full"></div>
+                </div>
+                <span className="text-xs text-gray-400">Ready</span>
               </div>
             </div>
-            <div className="flex-1 text-left">
-              <div className="text-[13px] font-medium text-white">Ailock Assistant</div>
-              <div className="text-[11px] text-white/60">Level 1 • Ready</div>
-            </div>
-            <ChevronDown className="w-4 h-4 text-white/60" />
+            <ChevronDown className="w-4 h-4 text-gray-400" />
           </button>
           
           {isAilockDropdownOpen && <AilockDropdown />}
