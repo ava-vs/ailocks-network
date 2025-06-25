@@ -89,7 +89,7 @@ export default function Header() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[1000] h-[60px] bg-[rgba(26,31,46,0.95)] backdrop-blur-[20px] border-b border-white/10">
-      <div className="grid grid-cols-[1fr_auto_1fr] h-full px-5 items-center">
+      <div className="grid grid-cols-[2fr_3fr_2fr] h-full px-5 items-center">
         {/* Left Section - Logo & Brand */}
         <div className="flex items-center gap-3 justify-self-start">
           <img 
@@ -105,7 +105,7 @@ export default function Header() {
         </div>
 
         {/* Center Section - Ailock Assistant Card with Progress */}
-        <div className="justify-self-center relative">
+        <div className="justify-self-start ml-8 relative">
           <button 
             onClick={() => setIsAilockDropdownOpen(!isAilockDropdownOpen)}
             className="flex items-center gap-3 px-4 py-2 bg-slate-700/50 border border-blue-500 rounded-xl hover:bg-slate-600/50 transition-all"
@@ -120,8 +120,9 @@ export default function Header() {
               <span className="text-white font-medium text-sm">Ailock Assistant</span>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400">Level 1</span>
-                <div className="w-16 h-1 bg-gray-600 rounded-full">
-                  <div className="w-3/4 h-1 bg-blue-500 rounded-full"></div>
+                <div className="w-16 h-1 bg-gray-600 rounded-full overflow-hidden">
+                  <div className="w-3/4 h-1 rounded-full" 
+                       style={{background: 'linear-gradient(90deg, #13B8F1 0%, #3C8EEC 52%, #00FB82 97%)'}}></div>
                 </div>
                 <span className="text-xs text-gray-400">Ready</span>
               </div>

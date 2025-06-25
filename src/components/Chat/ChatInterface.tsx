@@ -642,7 +642,11 @@ export default function ChatInterface() {
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto min-h-0 p-6">
         {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full px-8 ml-16 mr-16 min-h-[calc(100vh-60px)]">
+          <div className="flex items-center justify-center h-full px-8 ml-16 mr-16 min-h-[calc(100vh-120px)]"
+               style={{
+                 background: 'radial-gradient(ellipse at center, rgba(74, 158, 255, 0.03) 0%, transparent 70%)',
+                 backdropFilter: 'blur(1px)'
+               }}>
             <div className="max-w-5xl w-full flex items-center gap-10">
               {/* AILOCK CHARACTER ON LEFT */}
               <div className="flex-shrink-0">
@@ -651,7 +655,7 @@ export default function ChatInterface() {
                   alt="Ailock AI Assistant"
                   className="w-28 h-28 object-contain drop-shadow-2xl animate-float"
                   style={{
-                    filter: 'drop-shadow(0 20px 40px rgba(79, 70, 229, 0.3))'
+                    filter: 'drop-shadow(0 0 20px rgba(74, 158, 255, 0.3))'
                   }}
                 />
               </div>
@@ -677,38 +681,38 @@ export default function ChatInterface() {
                     onKeyDown={handleKeyDown}
                     placeholder={getPlaceholder()}
                     rows={1}
-                    className="w-full px-6 py-4 pr-36 bg-slate-800/60 border border-blue-500/30 
-                              rounded-2xl backdrop-blur text-white placeholder-gray-400
-                              focus:outline-none focus:border-blue-500 focus:bg-slate-800/80 resize-none h-[56px]"
+                    className="w-full px-6 py-6 pr-36 bg-slate-800/60 border border-blue-500/30 
+                              rounded-2xl backdrop-blur text-white placeholder-gray-400 text-lg
+                              focus:outline-none focus:border-blue-500 focus:bg-slate-800/80 resize-none h-16"
                     disabled={isStreaming || !sessionId}
                   />
                   
                   {/* INPUT ACTIONS */}
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
                     <button 
-                      className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
+                      className="p-3 hover:bg-slate-700/50 rounded-lg transition-colors"
                       title="Attach file"
                     >
-                      <Paperclip className="w-5 h-5 text-gray-400" />
+                      <Paperclip className="w-6 h-6 text-gray-400" />
                     </button>
                     <button 
                       onClick={() => setIsListening(!isListening)}
-                      className={`p-2 rounded-lg transition-colors ${
+                      className={`p-3 rounded-lg transition-colors ${
                         isListening 
                           ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
                           : 'text-gray-400 hover:bg-slate-700/50'
                       }`}
                       title="Voice input"
                     >
-                      <Mic className="w-5 h-5" />
+                      <Mic className="w-6 h-6" />
                     </button>
                     <button 
                       onClick={sendMessage}
                       disabled={!input.trim() || isStreaming || !sessionId}
-                      className="p-2 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Send message"
                     >
-                      <Send className="w-5 h-5 text-white" />
+                      <Send className="w-6 h-6 text-white" />
                     </button>
                   </div>
                 </div>
@@ -839,9 +843,9 @@ export default function ChatInterface() {
       </div>
 
       {/* Bottom Status Bar */}
-      <div className="fixed bottom-0 left-0 right-0 h-12 bg-slate-900/95 backdrop-blur border-t border-gray-700 flex items-center justify-between px-4 z-10">
+      <div className="fixed bottom-0 left-0 right-0 w-full h-12 bg-slate-900/95 backdrop-blur border-t border-gray-700 flex items-center justify-between px-6 z-40">
         {/* LEFT STATUS */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
             <span className="text-xs text-gray-400">Multi-Modal AI Active</span>
@@ -853,11 +857,13 @@ export default function ChatInterface() {
         </div>
         
         {/* RIGHT STATUS */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-6">
           <span className="text-xs text-gray-400">Ailocks v8.0 • Ai2Ai Network</span>
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-            <span className="text-xs text-gray-400">Built on Bolt</span>
+            <span className="text-xs text-gray-400 px-2 py-1 border border-gray-600 rounded-lg">
+              Built on Bolt
+            </span>
           </div>
         </div>
       </div>
