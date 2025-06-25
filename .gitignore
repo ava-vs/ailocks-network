@@ -28,3 +28,4 @@ dist-ssr
 .netlify
 .astro/content.d.ts
 .astro/types.d.ts
+.astro/
