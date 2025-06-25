@@ -143,4 +143,4 @@ export default function AilockQuickStatus({ isOpen, onClose, profile, onOpenFull
       </div>
     </>
   );
-} 
+}

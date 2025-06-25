@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { Search, Star, Clock, MapPin, Home, LogOut } from 'lucide-react';
+import { Search, Star, Clock, User, Home, LogOut } from 'lucide-react';
 import CollapsibleSidebar from './CollapsibleSidebar';
 
 interface NavLinkProps {
@@ -17,7 +17,7 @@ const NavLink = ({ href, children, isExpanded, isActive = false }: NavLinkProps)
       className={cn(
         "flex items-center w-full h-12 rounded-lg transition-all duration-200 group relative",
         isActive 
-          ? "bg-[rgba(74,158,255,0.15)] text-white" 
+          ? "bg-blue-500/20 text-white" 
           : "text-white/60 hover:bg-white/5 hover:text-white",
         !isExpanded && "justify-center"
       )}
@@ -29,24 +29,6 @@ const NavLink = ({ href, children, isExpanded, isActive = false }: NavLinkProps)
         {children}
       </div>
     </a>
-  );
-};
-
-interface GradientIconProps {
-  children: React.ReactNode;
-  isActive?: boolean;
-}
-
-const GradientIcon = ({ children, isActive = false }: GradientIconProps) => {
-  return (
-    <div className={cn(
-      "w-5 h-5 transition-all duration-200",
-      isActive 
-        ? "text-transparent bg-gradient-to-br from-[#E4F0FE] to-[#2A8ED7] bg-clip-text" 
-        : "text-transparent bg-gradient-to-br from-[#E4F0FE]/70 to-[#2A8ED7]/70 bg-clip-text hover:from-[#E4F0FE] hover:to-[#2A8ED7] group-hover:scale-110"
-    )}>
-      {children}
-    </div>
   );
 };
 
@@ -66,34 +48,31 @@ function NavigationSidebar({ isExpanded = false }: NavigationSidebarProps) {
   };
 
   return (
-    <div className="flex flex-col h-full p-4 text-white">
+    <div className="flex flex-col h-full p-2 text-white">
       <nav className="flex-grow space-y-2">
         <NavLink href="/" isExpanded={isExpanded} isActive={pathname === '/'}>
-          <GradientIcon isActive={pathname === '/'}>
-            <Home className="w-5 h-5" />
-          </GradientIcon>
-          {isExpanded && <span className="font-medium">Home</span>}
+          <Home className="w-5 h-5 text-blue-400" />
+          {isExpanded && <span className="font-medium whitespace-nowrap">Home</span>}
         </NavLink>
 
         <NavLink href="/query-history" isExpanded={isExpanded} isActive={pathname === '/query-history'}>
-          <GradientIcon isActive={pathname === '/query-history'}>
-            <Search className="w-5 h-5" />
-          </GradientIcon>
-          {isExpanded && <span className="font-medium">Query History</span>}
+          <Search className="w-5 h-5 text-blue-400" />
+          {isExpanded && <span className="font-medium whitespace-nowrap">Query History</span>}
         </NavLink>
 
         <NavLink href="/saved-intents" isExpanded={isExpanded} isActive={pathname === '/saved-intents'}>
-          <GradientIcon isActive={pathname === '/saved-intents'}>
-            <Star className="w-5 h-5" />
-          </GradientIcon>
-          {isExpanded && <span className="font-medium">Saved Intents</span>}
+          <Star className="w-5 h-5 text-blue-400" />
+          {isExpanded && <span className="font-medium whitespace-nowrap">Starred</span>}
         </NavLink>
 
         <NavLink href="/recent" isExpanded={isExpanded} isActive={pathname === '/recent'}>
-          <GradientIcon isActive={pathname === '/recent'}>
-            <Clock className="w-5 h-5" />
-          </GradientIcon>
-          {isExpanded && <span className="font-medium">Recent</span>}
+          <Clock className="w-5 h-5 text-blue-400" />
+          {isExpanded && <span className="font-medium whitespace-nowrap">Recent</span>}
+        </NavLink>
+
+        <NavLink href="/my-ailock" isExpanded={isExpanded} isActive={pathname === '/my-ailock'}>
+          <User className="w-5 h-5 text-blue-400" />
+          {isExpanded && <span className="font-medium whitespace-nowrap">My Ailock</span>}
         </NavLink>
 
         {/* Recent Items */}
@@ -126,9 +105,7 @@ function NavigationSidebar({ isExpanded = false }: NavigationSidebarProps) {
             "flex items-center",
             isExpanded ? "px-4 gap-3" : "justify-center w-full"
           )}>
-            <GradientIcon>
-              <LogOut className="w-5 h-5" />
-            </GradientIcon>
+            <LogOut className="w-5 h-5 text-blue-400" />
             {isExpanded && <span className="font-medium">Logout</span>}
           </div>
         </button>

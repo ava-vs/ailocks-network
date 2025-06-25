@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Clock, Users, Zap, Star, Calendar, Filter, Database, AlertCircle, Crown, Bot, Search, Plus, Target, ChevronUp, ChevronDown, Bell, FileText, Sparkles, Link } from 'lucide-react';
+import { MapPin, Clock, Users, Zap, Star, Calendar, Filter, Database, AlertCircle, Crown, Bot, Search, Plus, Target, ChevronUp, ChevronDown, Bell, FileText, Sparkles, Link, X } from 'lucide-react';
 import { useStore } from '@nanostores/react';
 import { appState } from '../../lib/store';
 import { useUserSession } from '../../hooks/useUserSession';
 import { cn } from '../../lib/utils';
 import AilockWidget from '../Ailock/AilockWidget';
-import { ailockApi } from '../../lib/ailock/api';
-import type { FullAilockProfile } from '../../lib/ailock/core';
 
 interface Intent {
   id: string;
@@ -40,7 +38,7 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
   const [dataSource, setDataSource] = useState<'real' | 'mock' | 'error'>('mock');
   const [intentsExpanded, setIntentsExpanded] = useState(true);
   const [newNotifications, setNewNotifications] = useState(3);
-  const [ailockProfile, setAilockProfile] = useState<FullAilockProfile | null>(null);
+  const [isRightPanelExpanded, setIsRightPanelExpanded] = useState(false);
 
   // Listen for new intents created from chat
   useEffect(() => {
@@ -79,21 +77,6 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
   useEffect(() => {
     fetchIntents();
   }, [location, filter, currentUser.id]);
-
-  useEffect(() => {
-    if (currentUser.id && currentUser.id !== 'loading') {
-      loadAilockProfile();
-    }
-  }, [currentUser.id]);
-
-  const loadAilockProfile = async () => {
-    try {
-      const profile = await ailockApi.getProfile(currentUser.id);
-      setAilockProfile(profile);
-    } catch (error) {
-      console.error('Failed to load Ailock profile:', error);
-    }
-  };
 
   const fetchIntents = async () => {
     try {
@@ -264,296 +247,221 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
     });
   };
 
-  const getTexts = () => {
-    const texts = {
-      en: {
-        title: 'Intent Panel',
-        dataSource: 'Data Source',
-        location: 'Your Location',
-        activeMatching: 'Active Matching',
-        nearbyOpportunities: 'Nearby Opportunities',
-        myIntents: 'My Intents',
-        filter: 'Filter',
-        all: 'All',
-        technology: 'Technology',
-        research: 'Research',
-        design: 'Design',
-        analytics: 'Analytics',
-        blockchain: 'Blockchain',
-        marketing: 'Marketing',
-        security: 'Security',
-        createIntent: 'Create Intent',
-        loading: 'Loading...',
-        noIntents: 'No intents found.',
-        urgent: 'Urgent',
-        realData: 'Live Database',
-        mockData: 'Demo Data',
-        errorData: 'Offline Mode',
-        createdByYou: 'Created by you',
-        myAilock: 'My Ailock',
-        matchScore: 'Match Score',
-        real: 'Live Database',
-        mock: 'Demo Data',
-        error: 'Offline Mode',
-      },
-      ru: {
-        title: 'Панель интентов',
-        dataSource: 'Источник данных',
-        location: 'Ваше местоположение',
-        activeMatching: 'Активный подбор',
-        nearbyOpportunities: 'Возможности поблизости',
-        myIntents: 'Мои интенты',
-        filter: 'Фильтр',
-        all: 'Все',
-        technology: 'Технологии',
-        research: 'Исследования',
-        design: 'Дизайн',
-        analytics: 'Аналитика',
-        blockchain: 'Блокчейн',
-        marketing: 'Маркетинг',
-        security: 'Безопасность',
-        createIntent: 'Создать интент',
-        loading: 'Загрузка...',
-        noIntents: 'Нет доступных интентов.',
-        urgent: 'Срочно',
-        realData: 'Live Database',
-        mockData: 'Demo Data',
-        errorData: 'Offline Mode',
-        createdByYou: 'Создано вами',
-        myAilock: 'Мой Ailock',
-        real: 'Live Database',
-        mock: 'Demo Data',
-        error: 'Offline Mode',
-      }
-    };
-    return texts[language as keyof typeof texts] || texts.en;
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return 'text-red-400 bg-red-500/20 border-red-500/30';
-      case 'high': return 'text-orange-400 bg-orange-500/20 border-orange-500/30';
-      case 'medium': return 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30';
-      case 'low': return 'text-green-400 bg-green-500/20 border-green-500/30';
-      default: return 'text-gray-400 bg-gray-500/20 border-gray-500/30';
-    }
-  };
-
-  const getAvatarGradient = () => {
-    if (!ailockProfile) return 'from-cyan-400 via-blue-400 to-indigo-400';
-    if (ailockProfile.level >= 15) return 'from-purple-400 via-pink-400 to-yellow-400';
-    if (ailockProfile.level >= 10) return 'from-blue-400 via-purple-400 to-pink-400';
-    if (ailockProfile.level >= 5) return 'from-green-400 via-blue-400 to-purple-400';
-    return 'from-cyan-400 via-blue-400 to-indigo-400';
-  };
-
-  const texts = getTexts();
   const filteredOtherIntents = filter === 'all' ? otherIntents : otherIntents.filter(intent => 
     intent.category.toLowerCase() === filter.toLowerCase()
   );
 
-  return (
-    <div className={cn("flex flex-col h-full text-white", !isExpanded && "items-center p-2")}>
-      {!isExpanded && (
+  if (!isExpanded) {
+    return (
+      <div className="flex flex-col h-full text-white items-center p-2">
         <div className="flex flex-col items-center space-y-4 p-2 w-full">
           {/* Toggle Button with Notification Badge */}
-          <div 
-            className="relative w-[30px] h-[30px] rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
+          <button 
             onClick={() => {
+              setIsRightPanelExpanded(!isRightPanelExpanded);
               setNewNotifications(0);
             }}
+            className="relative w-12 h-12 flex items-center justify-center rounded-lg hover:bg-slate-700/50 transition-colors"
             title={newNotifications > 0 ? `${newNotifications} new notification${newNotifications !== 1 ? 's' : ''}` : 'Intent Panel'}
           >
-            <div className="w-6 h-6 text-transparent bg-gradient-to-br from-[#E4F0FE] to-[#2A8ED7] bg-clip-text">
-              <FileText className="w-6 h-6" />
-            </div>
+            <svg className="w-6 h-6 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+            </svg>
             {newNotifications > 0 && (
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center shadow-lg border border-slate-800">
-                <span className="text-[8px] font-medium text-white">{newNotifications}</span>
-              </div>
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center text-white">
+                {newNotifications}
+              </span>
             )}
-          </div>
+          </button>
 
           {/* Documents Icon */}
-          <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer">
-            <div className="w-6 h-6 text-transparent bg-gradient-to-br from-[#E4F0FE]/70 to-[#2A8ED7]/70 bg-clip-text hover:from-[#E4F0FE] hover:to-[#2A8ED7]">
-              <FileText className="w-6 h-6" />
-            </div>
+          <div className="w-12 h-12 flex items-center justify-center rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer">
+            <svg className="w-6 h-6 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+            </svg>
           </div>
 
           {/* AI Tools Icon */}
-          <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer">
-            <div className="w-6 h-6 text-transparent bg-gradient-to-br from-[#E4F0FE]/70 to-[#2A8ED7]/70 bg-clip-text hover:from-[#E4F0FE] hover:to-[#2A8ED7]">
-              <Sparkles className="w-6 h-6" />
-            </div>
+          <div className="w-12 h-12 flex items-center justify-center rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer">
+            <svg className="w-6 h-6 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1z" />
+            </svg>
           </div>
 
           {/* Intents Icon */}
-          <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer">
-            <div className="w-6 h-6 text-transparent bg-gradient-to-br from-[#E4F0FE]/70 to-[#2A8ED7]/70 bg-clip-text hover:from-[#E4F0FE] hover:to-[#2A8ED7]">
-              <Link className="w-6 h-6" />
-            </div>
+          <div className="w-12 h-12 flex items-center justify-center rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer">
+            <svg className="w-6 h-6 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" />
+            </svg>
           </div>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {isExpanded && (
-        <div className="p-4 space-y-6 w-full">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-white">In Work</h3>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setNewNotifications(0)}
-                className="p-1 hover:bg-white/10 rounded transition-colors"
-                title={newNotifications > 0 ? `Mark ${newNotifications} notification${newNotifications !== 1 ? 's' : ''} as read` : 'No new notifications'}
-              >
-                <Bell className={`w-4 h-4 ${newNotifications > 0 ? 'text-blue-400' : 'text-white/60'}`} />
-              </button>
-              {newNotifications > 0 && (
-                <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-              )}
-            </div>
-          </div>
-
-          {/* Ailock Widget */}
-          <div className="mb-6">
-            <AilockWidget />
-          </div>
-
-          {/* Work Items */}
-          <div className="space-y-3">
-            <div 
-              className="bg-[rgba(26,31,46,0.6)] backdrop-blur-[20px] border border-white/10 rounded-xl p-4 hover:shadow-[0_0_20px_rgba(74,158,255,0.1)] cursor-pointer transition-all"
-              onClick={() => {
-                if (newNotifications > 0) {
-                  setNewNotifications(prev => Math.max(0, prev - 1));
-                }
-              }}
+  return (
+    <div className="flex flex-col h-full text-white w-full">
+      <div className="p-4 space-y-6 w-full">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-white">In Work</h3>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setNewNotifications(0)}
+              className="p-1 hover:bg-white/10 rounded transition-colors"
+              title={newNotifications > 0 ? `Mark ${newNotifications} notification${newNotifications !== 1 ? 's' : ''} as read` : 'No new notifications'}
             >
-              <div className="flex items-start justify-between mb-2">
-                <h4 className="font-medium text-sm text-white">Design Collaboration</h4>
-                <div className="flex items-center gap-1">
-                  {newNotifications > 0 ? (
-                    <div className="flex items-center gap-1">
-                      <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                      <span className="text-xs text-blue-400 font-medium">Just Added</span>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-white/60">Read</span>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs text-white/60">Rating:</span>
-                <span className="text-xs text-yellow-400">4.8/5</span>
-              </div>
-              <p className="text-xs text-white/60 mb-3">
-                UI/UX design project for modern web app. Looking for creative collaboration with experienced designers.
-              </p>
-              <div className="flex gap-2">
-                <button 
-                  className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs font-medium hover:bg-yellow-500/30 transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                >
-                  🔔 Notify
-                </button>
-                <button 
-                  className="px-3 py-1 bg-green-500/20 text-green-400 rounded text-xs font-medium hover:bg-green-500/30 transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                >
-                  ✅ Active
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Intents Section */}
-          <div className="bg-[rgba(26,31,46,0.6)] backdrop-blur-[20px] border border-white/10 rounded-xl p-4">
-            <button 
-              onClick={() => setIntentsExpanded(!intentsExpanded)}
-              className="flex items-center justify-between w-full mb-3"
-            >
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-blue-400" />
-                <span className="font-medium text-sm text-white">Intents</span>
-                <div className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">
-                  {myIntents.length + filteredOtherIntents.length}
-                </div>
-              </div>
-              {intentsExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              <Bell className={`w-4 h-4 ${newNotifications > 0 ? 'text-blue-400' : 'text-white/60'}`} />
             </button>
+            {newNotifications > 0 && (
+              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+            )}
+            <button
+              onClick={() => setIsRightPanelExpanded(false)}
+              className="p-1 hover:bg-white/10 rounded transition-colors"
+            >
+              <X className="w-4 h-4 text-white/60" />
+            </button>
+          </div>
+        </div>
 
-            {intentsExpanded && (
-              <div className="space-y-2">
-                <div className="flex gap-2 mb-3">
-                  <button 
-                    onClick={() => setFilter('all')}
-                    className={`px-2 py-1 rounded text-xs transition-colors ${
-                      filter === 'all' 
-                        ? 'bg-blue-500/20 text-blue-400' 
-                        : 'hover:bg-white/10 text-white/60'
-                    }`}
-                  >
-                    All
-                  </button>
-                  <button 
-                    onClick={() => setFilter('design')}
-                    className={`px-2 py-1 rounded text-xs transition-colors ${
-                      filter === 'design' 
-                        ? 'bg-blue-500/20 text-blue-400' 
-                        : 'hover:bg-white/10 text-white/60'
-                    }`}
-                  >
-                    Design
-                  </button>
-                  <button 
-                    onClick={() => setFilter('technology')}
-                    className={`px-2 py-1 rounded text-xs transition-colors ${
-                      filter === 'technology' 
-                        ? 'bg-blue-500/20 text-blue-400' 
-                        : 'hover:bg-white/10 text-white/60'
-                    }`}
-                  >
-                    Tech
-                  </button>
-                </div>
-                
-                {loading ? (
-                  <div className="flex justify-center items-center py-4">
-                    <div className="animate-spin w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>
+        {/* Ailock Widget */}
+        <div className="mb-6">
+          <AilockWidget />
+        </div>
+
+        {/* Work Items */}
+        <div className="space-y-3">
+          <div 
+            className="bg-[rgba(26,31,46,0.6)] backdrop-blur-[20px] border border-white/10 rounded-xl p-4 hover:shadow-[0_0_20px_rgba(74,158,255,0.1)] cursor-pointer transition-all"
+            onClick={() => {
+              if (newNotifications > 0) {
+                setNewNotifications(prev => Math.max(0, prev - 1));
+              }
+            }}
+          >
+            <div className="flex items-start justify-between mb-2">
+              <h4 className="font-medium text-sm text-white">Design Collaboration</h4>
+              <div className="flex items-center gap-1">
+                {newNotifications > 0 ? (
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-blue-400 font-medium">Just Added</span>
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {myIntents.map(intent => (
-                      <div key={intent.id} className="p-2 bg-[rgba(26,31,46,0.6)] backdrop-blur-[20px] border border-white/10 rounded-lg">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium text-white">{intent.title}</span>
-                          <span className="text-xs text-green-400">{intent.matchScore}%</span>
-                        </div>
-                        <p className="text-xs text-white/60">My opportunity</p>
-                      </div>
-                    ))}
-                    
-                    {filteredOtherIntents.slice(0, 3).map(intent => (
-                      <div key={intent.id} className="p-2 bg-[rgba(26,31,46,0.6)] backdrop-blur-[20px] border border-white/10 rounded-lg">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium text-white">{intent.title}</span>
-                          <span className="text-xs text-green-400">{intent.matchScore}%</span>
-                        </div>
-                        <p className="text-xs text-white/60">{intent.distance}</p>
-                      </div>
-                    ))}
-                  </div>
+                  <span className="text-xs text-white/60">Read</span>
                 )}
               </div>
-            )}
+            </div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs text-white/60">Rating:</span>
+              <span className="text-xs text-yellow-400">4.8/5</span>
+            </div>
+            <p className="text-xs text-white/60 mb-3">
+              UI/UX design project for modern web app. Looking for creative collaboration with experienced designers.
+            </p>
+            <div className="flex gap-2">
+              <button 
+                className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs font-medium hover:bg-yellow-500/30 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                🔔 Notify
+              </button>
+              <button 
+                className="px-3 py-1 bg-green-500/20 text-green-400 rounded text-xs font-medium hover:bg-green-500/30 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+              >
+                ✅ Active
+              </button>
+            </div>
           </div>
         </div>
-      )}
+
+        {/* Intents Section */}
+        <div className="bg-[rgba(26,31,46,0.6)] backdrop-blur-[20px] border border-white/10 rounded-xl p-4">
+          <button 
+            onClick={() => setIntentsExpanded(!intentsExpanded)}
+            className="flex items-center justify-between w-full mb-3"
+          >
+            <div className="flex items-center gap-2">
+              <Target className="w-4 h-4 text-blue-400" />
+              <span className="font-medium text-sm text-white">Intents</span>
+              <div className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-xs">
+                {myIntents.length + filteredOtherIntents.length}
+              </div>
+            </div>
+            {intentsExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+
+          {intentsExpanded && (
+            <div className="space-y-2">
+              <div className="flex gap-2 mb-3">
+                <button 
+                  onClick={() => setFilter('all')}
+                  className={`px-2 py-1 rounded text-xs transition-colors ${
+                    filter === 'all' 
+                      ? 'bg-blue-500/20 text-blue-400' 
+                      : 'hover:bg-white/10 text-white/60'
+                  }`}
+                >
+                  All
+                </button>
+                <button 
+                  onClick={() => setFilter('design')}
+                  className={`px-2 py-1 rounded text-xs transition-colors ${
+                    filter === 'design' 
+                      ? 'bg-blue-500/20 text-blue-400' 
+                      : 'hover:bg-white/10 text-white/60'
+                  }`}
+                >
+                  Design
+                </button>
+                <button 
+                  onClick={() => setFilter('technology')}
+                  className={`px-2 py-1 rounded text-xs transition-colors ${
+                    filter === 'technology' 
+                      ? 'bg-blue-500/20 text-blue-400' 
+                      : 'hover:bg-white/10 text-white/60'
+                  }`}
+                >
+                  Tech
+                </button>
+              </div>
+              
+              {loading ? (
+                <div className="flex justify-center items-center py-4">
+                  <div className="animate-spin w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {myIntents.map(intent => (
+                    <div key={intent.id} className="p-2 bg-[rgba(26,31,46,0.6)] backdrop-blur-[20px] border border-white/10 rounded-lg">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-white">{intent.title}</span>
+                        <span className="text-xs text-green-400">{intent.matchScore}%</span>
+                      </div>
+                      <p className="text-xs text-white/60">My opportunity</p>
+                    </div>
+                  ))}
+                  
+                  {filteredOtherIntents.slice(0, 3).map(intent => (
+                    <div key={intent.id} className="p-2 bg-[rgba(26,31,46,0.6)] backdrop-blur-[20px] border border-white/10 rounded-lg">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-white">{intent.title}</span>
+                        <span className="text-xs text-green-400">{intent.matchScore}%</span>
+                      </div>
+                      <p className="text-xs text-white/60">{intent.distance}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
