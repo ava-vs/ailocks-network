@@ -30,9 +30,8 @@ export default function CollapsibleSidebar({ children, side }: CollapsibleSideba
   const isMobile = useMediaQuery('(max-width: 768px)');
 
   if (isMobile) {
-    // Mobile behavior: controlled by global state, appears as an overlay
     if (side === 'right') {
-      return null; // Don't render right sidebar on mobile for now
+      return null;
     }
     
     return (
@@ -45,8 +44,8 @@ export default function CollapsibleSidebar({ children, side }: CollapsibleSideba
         )}
         <div
           className={cn(
-            'fixed top-0 left-0 h-full z-40 transition-transform duration-300 ease-in-out',
-            'w-72 p-4 glass-morphism-dark',
+            'fixed top-[60px] left-0 h-[calc(100vh-60px)] z-40 transition-transform duration-300 ease-in-out',
+            'w-72 bg-[rgba(26,31,46,0.9)] backdrop-blur-[20px] border-r border-white/10',
             isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
           )}
         >
@@ -63,14 +62,12 @@ export default function CollapsibleSidebar({ children, side }: CollapsibleSideba
     );
   }
 
-  // Desktop behavior: controlled by hover
   const isExpanded = isHoverExpanded;
   const sidebarClasses = cn(
-    'fixed top-0 h-full z-40 transition-all duration-300 ease-in-out',
-    'pt-28 pb-8', // Padding to avoid header and bottom edge
-    'glass-morphism-dark',
-    side === 'left' ? 'left-0' : 'right-0',
-    isExpanded ? 'w-72' : 'w-20'
+    'fixed top-[60px] h-[calc(100vh-60px)] z-40 transition-all duration-300 ease-in-out',
+    'bg-[rgba(26,31,46,0.9)] backdrop-blur-[20px]',
+    side === 'left' ? 'left-0 border-r border-white/10' : 'right-0 border-l border-white/10',
+    isExpanded ? 'w-[220px]' : 'w-[60px]'
   );
 
   return (
@@ -89,4 +86,4 @@ export default function CollapsibleSidebar({ children, side }: CollapsibleSideba
       </div>
     </div>
   );
-} 
+}

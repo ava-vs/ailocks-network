@@ -41,14 +41,14 @@ const { title, description = "Advanced AI collaboration platform with geo-intell
     <!-- Additional head content -->
     <slot name="head" />
   </head>
-  <body class="bg-background text-foreground overflow-hidden h-screen">
+  <body class="bg-[#0B1426] text-foreground overflow-hidden h-screen">
     <Header client:load />
 
     <div class="hidden md:block">
       <CollapsibleNavigationSidebar client:load />
     </div>
 
-    <main class="fixed top-28 bottom-16 left-4 right-4 md:left-24 md:right-24">
+    <main class="fixed top-[60px] bottom-16 left-4 right-4 md:left-[60px] md:right-[60px]">
       <div class="h-full w-full rounded-2xl overflow-hidden">
         <slot />
       </div>
@@ -59,7 +59,7 @@ const { title, description = "Advanced AI collaboration platform with geo-intell
     </div>
 
     <!-- Status Bar -->
-    <div class="fixed bottom-4 left-4 right-4 md:left-24 md:right-24">
+    <div class="fixed bottom-4 left-4 right-4 md:left-[60px] md:right-[60px]">
       <StatusBar client:load />
     </div>
   </body>

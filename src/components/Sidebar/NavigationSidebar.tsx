@@ -1,34 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { Icon } from '@/components/Icon';
+import { Search, Star, Clock, MapPin, Home, LogOut } from 'lucide-react';
 import CollapsibleSidebar from './CollapsibleSidebar';
 
 interface NavLinkProps {
   href: string;
   children: React.ReactNode;
   isExpanded: boolean;
+  isActive?: boolean;
 }
 
-const NavLink = ({ href, children, isExpanded }: NavLinkProps) => {
-  const [pathname, setPathname] = useState('');
-  useEffect(() => {
-    // This hook runs only on the client, so window is safe to use.
-    setPathname(window.location.pathname);
-  }, []);
-
-  const isActive = pathname === href;
-
+const NavLink = ({ href, children, isExpanded, isActive = false }: NavLinkProps) => {
   return (
     <a
       href={href}
       className={cn(
-        "flex items-center w-full h-12 rounded-lg px-4 transition-colors duration-200",
-        isActive ? "bg-white/10 text-white" : "text-white/60 hover:bg-white/5 hover:text-white",
+        "flex items-center w-full h-12 rounded-lg transition-all duration-200 group relative",
+        isActive 
+          ? "bg-[rgba(74,158,255,0.15)] text-white" 
+          : "text-white/60 hover:bg-white/5 hover:text-white",
         !isExpanded && "justify-center"
       )}
     >
-      {children}
+      <div className={cn(
+        "flex items-center",
+        isExpanded ? "px-4 gap-3" : "justify-center w-full"
+      )}>
+        {children}
+      </div>
     </a>
+  );
+};
+
+interface GradientIconProps {
+  children: React.ReactNode;
+  isActive?: boolean;
+}
+
+const GradientIcon = ({ children, isActive = false }: GradientIconProps) => {
+  return (
+    <div className={cn(
+      "w-5 h-5 transition-all duration-200",
+      isActive 
+        ? "text-transparent bg-gradient-to-br from-[#E4F0FE] to-[#2A8ED7] bg-clip-text" 
+        : "text-transparent bg-gradient-to-br from-[#E4F0FE]/70 to-[#2A8ED7]/70 bg-clip-text hover:from-[#E4F0FE] hover:to-[#2A8ED7] group-hover:scale-110"
+    )}>
+      {children}
+    </div>
   );
 };
 
@@ -37,58 +55,88 @@ interface NavigationSidebarProps {
 }
 
 function NavigationSidebar({ isExpanded = false }: NavigationSidebarProps) {
+  const [pathname, setPathname] = useState('');
+
+  useEffect(() => {
+    setPathname(window.location.pathname);
+  }, []);
+
   const handleSignOut = () => {
-    // Implement sign out logic here
     console.log("Signing out...");
   };
 
   return (
     <div className="flex flex-col h-full p-4 text-white">
       <nav className="flex-grow space-y-2">
-        <NavLink href="/" isExpanded={isExpanded}>
-          <Icon name="home" className="h-5 w-5" />
-          {isExpanded && <span className="ml-3">Home</span>}
+        <NavLink href="/" isExpanded={isExpanded} isActive={pathname === '/'}>
+          <GradientIcon isActive={pathname === '/'}>
+            <Home className="w-5 h-5" />
+          </GradientIcon>
+          {isExpanded && <span className="font-medium">Home</span>}
         </NavLink>
-        <NavLink href="/my-ailock" isExpanded={isExpanded}>
-          <Icon name="ailock" className="h-5 w-5" />
-          {isExpanded && <span className="ml-3">My Ailock</span>}
+
+        <NavLink href="/query-history" isExpanded={isExpanded} isActive={pathname === '/query-history'}>
+          <GradientIcon isActive={pathname === '/query-history'}>
+            <Search className="w-5 h-5" />
+          </GradientIcon>
+          {isExpanded && <span className="font-medium">Query History</span>}
         </NavLink>
-        <NavLink href="/query-history" isExpanded={isExpanded}>
-          <Icon name="history" className="h-5 w-5" />
-          {isExpanded && <span className="ml-3">Query History</span>}
+
+        <NavLink href="/saved-intents" isExpanded={isExpanded} isActive={pathname === '/saved-intents'}>
+          <GradientIcon isActive={pathname === '/saved-intents'}>
+            <Star className="w-5 h-5" />
+          </GradientIcon>
+          {isExpanded && <span className="font-medium">Saved Intents</span>}
         </NavLink>
-        <NavLink href="/saved-intents" isExpanded={isExpanded}>
-          <Icon name="bookmark" className="h-5 w-5" />
-          {isExpanded && <span className="ml-3">Saved Intents</span>}
+
+        <NavLink href="/recent" isExpanded={isExpanded} isActive={pathname === '/recent'}>
+          <GradientIcon isActive={pathname === '/recent'}>
+            <Clock className="w-5 h-5" />
+          </GradientIcon>
+          {isExpanded && <span className="font-medium">Recent</span>}
         </NavLink>
-        <NavLink href="/recent" isExpanded={isExpanded}>
-          <Icon name="recent" className="h-5 w-5" />
-          {isExpanded && <span className="ml-3">Recent</span>}
-        </NavLink>
-        {/* The page for API Keys does not exist yet.
-        <NavLink href="/api-keys" isExpanded={isExpanded}>
-          <Icon name="key" className="h-5 w-5" />
-          {isExpanded && <span className="ml-3">API Keys</span>}
-        </NavLink> 
-        */}
+
+        {/* Recent Items */}
+        {isExpanded && (
+          <div className="pt-4 space-y-1">
+            <div className="px-4 text-xs font-medium text-white/40 uppercase tracking-wider">Recent</div>
+            <div className="space-y-1">
+              <div className="flex items-center px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
+                <div className="w-2 h-2 bg-blue-400 rounded-full mr-3"></div>
+                <span className="truncate">My move to Rio de Janeiro</span>
+              </div>
+              <div className="flex items-center px-4 py-2 text-sm text-white/70 hover:text-white hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-3"></div>
+                <span className="truncate">Setting up in Rio: apartment, community, work</span>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
+
       <div className="mt-auto">
         <button
           onClick={handleSignOut}
           className={cn(
-            "flex items-center w-full h-12 rounded-lg px-4 transition-colors duration-200 text-white/60 hover:bg-white/5 hover:text-white",
+            "flex items-center w-full h-12 rounded-lg transition-colors duration-200 text-white/60 hover:bg-white/5 hover:text-white",
             !isExpanded && "justify-center"
           )}
         >
-          <Icon name="logout" className="h-5 w-5" />
-          {isExpanded && <span className="ml-3">Logout</span>}
+          <div className={cn(
+            "flex items-center",
+            isExpanded ? "px-4 gap-3" : "justify-center w-full"
+          )}>
+            <GradientIcon>
+              <LogOut className="w-5 h-5" />
+            </GradientIcon>
+            {isExpanded && <span className="font-medium">Logout</span>}
+          </div>
         </button>
       </div>
     </div>
   );
 }
 
-// Default export wrapped in CollapsibleSidebar
 export default function CollapsibleNavigationSidebar() {
   return (
     <CollapsibleSidebar side="left">

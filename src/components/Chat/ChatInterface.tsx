@@ -5,7 +5,6 @@ import { appState, setMode, setLanguage, type AIMode, type Language } from '../.
 import { useUserSession } from '../../hooks/useUserSession';
 import { useLocation } from '../../hooks/useLocation';
 import MessageBubble from './MessageBubble';
-import ContextActions from './ContextActions';
 import IntentPreview from './IntentPreview';
 import { getProfile, gainXp } from '../../lib/ailock/api';
 import type { FullAilockProfile } from '../../lib/ailock/core';
@@ -181,7 +180,7 @@ export default function ChatInterface() {
           body: JSON.stringify({ 
             mode, 
             language, 
-            userId: currentUser.id // Pass user ID for database persistence
+            userId: currentUser.id
           })
         });
 
@@ -190,7 +189,6 @@ export default function ChatInterface() {
           setSessionId(data.sessionId);
           setConnectionStatus('connected');
           
-          // Check if it's a fallback session
           if (data.fallback) {
             console.warn('Session created in fallback mode:', data.warning);
             setError('Session created without persistent storage');
@@ -204,10 +202,9 @@ export default function ChatInterface() {
         }
       } catch (err) {
         console.warn('Session initialization error:', err);
-        // Create a local fallback session
         const mockSessionId = `local-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
         setSessionId(mockSessionId);
-        setConnectionStatus('connected'); // Still allow chat to work
+        setConnectionStatus('connected');
         setError('Session created in offline mode - messages will not be saved');
       }
     };
@@ -252,7 +249,6 @@ export default function ChatInterface() {
   }, [sessionId]);
 
   useEffect(() => {
-    // Load persisted user session
     if (currentUser && currentUser.id !== 'loading') {
       console.log('Current user is valid, fetching profile:', currentUser.name);
       getProfile(currentUser.id)
@@ -283,10 +279,9 @@ export default function ChatInterface() {
     setIsStreaming(true);
     setError(null);
     setSuggestedActions([]);
-    setFoundIntents([]); // Clear previous intents
+    setFoundIntents([]);
 
     try {
-      // Send to Ailock for processing with user ID
       await sendAilockMessage(userMessage);
     } catch (err) {
       console.warn('Ailock request failed, using fallback:', err);
@@ -305,7 +300,7 @@ export default function ChatInterface() {
           mode,
           language,
           location: location,
-          userId: currentUser.id === 'loading' ? undefined : currentUser.id, // Only include valid user ID
+          userId: currentUser.id === 'loading' ? undefined : currentUser.id,
           streaming: true
         })
       });
@@ -339,7 +334,7 @@ export default function ChatInterface() {
               if (done) {
                 setIsStreaming(false);
                 setStreamingMessageId(null);
-                setAilockStatus('available'); // Mark as working
+                setAilockStatus('available');
                 setError(null);
                 console.log('✅ Message conversation saved to database');
                 handleXpGain();
@@ -357,7 +352,7 @@ export default function ChatInterface() {
                   if (data === '[DONE]') {
                     setIsStreaming(false);
                     setStreamingMessageId(null);
-                    setAilockStatus('available'); // Mark as working
+                    setAilockStatus('available');
                     setError(null);
                     console.log('✅ Message conversation saved to database');
                     handleXpGain();
@@ -379,7 +374,6 @@ export default function ChatInterface() {
                         msg.id === assistantMessage.id ? { ...assistantMessage } : msg
                       ));
                     } else if (parsed.type === 'intents') {
-                      // Display found intents as cards
                       setFoundIntents(parsed.intents);
                     } else if (parsed.type === 'actions') {
                       setSuggestedActions(parsed.actions);
@@ -423,7 +417,6 @@ export default function ChatInterface() {
 
     setMessages(prev => [...prev, assistantMessage]);
     
-    // Simulate typing with fallback response
     const fallbackContent = getMockResponse(mode, language);
     let currentContent = '';
     
@@ -448,38 +441,9 @@ export default function ChatInterface() {
     }
   };
 
-  const handleContextAction = async (actionId: string) => {
-    // Handle Ailock-specific actions
-    const actionMessages: Record<string, string> = {
-      'create-intent-from-request': 'Create a new collaboration opportunity based on my request',
-      'search-broader-area': 'Search for opportunities in a broader geographic area',
-      'get-market-insights': 'Provide market insights and trends for my field',
-      'find-experts': 'Help me find experts in my area of interest',
-      'view-intent-details': 'Show me more details about these opportunities',
-      'contact-intent-owner': 'Help me contact the opportunity owners',
-      'create-similar-intent': 'Help me create a similar opportunity',
-      'search-nearby': `Search for nearby opportunities and insights in ${location.city}, ${location.country}`,
-      'analyze-trends': 'Analyze current market trends and emerging patterns in my industry',
-      'find-sources': 'Help me find reliable sources and research data for my project',
-      'brainstorm': 'Let\'s brainstorm creative ideas for my current challenge',
-      'find-collaborators': 'Help me find potential collaborators in my area',
-      'market-research': 'Conduct market research for my target audience',
-      'deep-analysis': 'Perform a deep strategic analysis of my situation',
-      'competitive-intel': 'Gather competitive intelligence in my market',
-      'risk-assessment': 'Conduct a comprehensive risk assessment'
-    };
-
-    const message = actionMessages[actionId];
-    if (message) {
-      setInput(message);
-      inputRef.current?.focus();
-    }
-  };
-
   const handleCreateIntent = async () => {
     if (!sessionId || !intentPreview) return;
     
-    // Ensure we have a valid user ID before creating intent
     if (!currentUser.id || currentUser.id === 'loading') {
       setError('Please wait for user data to load before creating intents');
       return;
@@ -496,14 +460,13 @@ export default function ChatInterface() {
           location,
           language,
           intentData: intentPreview,
-          userId: currentUser.id // Pass current user ID
+          userId: currentUser.id
         })
       });
 
       if (response.ok) {
         const data = await response.json();
         
-        // Add success message to chat
         const successMessage: Message = {
           id: `${Date.now()}-system`,
           content: `✅ Intent created successfully: "${data.intent.title}". Your collaboration opportunity is now live and visible to potential partners!`,
@@ -514,7 +477,6 @@ export default function ChatInterface() {
 
         setMessages(prev => [...prev, successMessage]);
         
-        // Trigger sidebar refresh with user ID
         window.dispatchEvent(new CustomEvent('intentCreated', { 
           detail: { 
             ...data.intent, 
@@ -524,7 +486,6 @@ export default function ChatInterface() {
           } 
         }));
         
-        // Remove the create-intent action since it's been completed
         setSuggestedActions(prev => prev.filter(action => action.id !== 'create-intent'));
         
         setShowIntentPreview(false);
@@ -545,9 +506,7 @@ export default function ChatInterface() {
   };
 
   const handleIntentCardClick = (intent: IntentCard) => {
-    // Handle clicking on intent cards - could open details, contact, etc.
     console.log('Intent card clicked:', intent);
-    // For now, just add a message about the intent
     const message = `Tell me more about "${intent.title}" - this looks interesting!`;
     setInput(message);
     inputRef.current?.focus();
@@ -624,8 +583,6 @@ export default function ChatInterface() {
     return `${randomResponse}\n\n*Note: Using offline mode - Ailock services may be temporarily unavailable.*`;
   };
 
-
-
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgent': return 'text-red-400 bg-red-500/20 border-red-500/30';
@@ -654,7 +611,6 @@ export default function ChatInterface() {
         if (result.success) {
             toast.success(`+${result.xpGained} XP`, { duration: 1500, icon: '✨' });
             
-            // Optimistically update profile in state
             setAilockProfile(prev => prev ? {...prev, xp: result.newXp} : null);
 
             if (result.leveledUp) {
@@ -663,7 +619,6 @@ export default function ChatInterface() {
                     skillPointsGained: result.skillPointsGained,
                     xpGained: result.xpGained
                 });
-                // Optimistically update level and skill points
                 setAilockProfile(prev => prev ? {...prev, level: result.newLevel, skillPoints: (prev.skillPoints || 0) + result.skillPointsGained} : null);
             }
         }
@@ -691,7 +646,7 @@ export default function ChatInterface() {
           <div className="flex flex-col items-center justify-center h-full">
             <div className="text-center max-w-2xl">
               {/* AI Character Image */}
-              <div className="w-32 h-32 mx-auto mb-8 relative">
+              <div className="w-[120px] h-[120px] mx-auto mb-8 relative">
                 <img 
                   src="/images/ailock-character.png" 
                   alt="Ailock AI Assistant"
@@ -721,19 +676,6 @@ export default function ChatInterface() {
                   </div>
                   <p className="text-emerald-300 text-sm">
                     Your conversations with Ailock are being saved and will persist across sessions.
-                  </p>
-                </div>
-              )}
-              
-              {/* Ailock Status Warning */}
-              {ailockStatus === 'unavailable' && (
-                <div className="mt-6 p-4 bg-amber-500/20 border border-amber-500/30 rounded-xl">
-                  <div className="flex items-center space-x-2 text-amber-400 mb-2">
-                    <AlertCircle className="w-5 h-5" />
-                    <span className="font-medium">Ailock Services Configuration Required</span>
-                  </div>
-                  <p className="text-amber-300 text-sm">
-                    Please configure AI API keys in Netlify environment variables for full functionality.
                   </p>
                 </div>
               )}
@@ -850,41 +792,6 @@ export default function ChatInterface() {
         )}
       </div>
 
-      {/* Suggested Actions */}
-      {suggestedActions.length > 0 && (
-        <div className="flex-shrink-0 px-6 py-4 border-t border-white/10">
-          <div className="max-w-4xl mx-auto">
-            <p className="text-sm text-white/60 mb-3">Suggested actions:</p>
-            <div className="flex flex-wrap gap-2">
-              {suggestedActions.map((action) => (
-                <button
-                  key={action.id}
-                  onClick={() => handleContextAction(action.id)}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all border text-sm font-medium ${
-                    action.priority === 'high'
-                      ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border-blue-500/30 shadow-lg'
-                      : 'bg-white/5 hover:bg-white/10 text-white/80 border-white/10'
-                  }`}
-                >
-                  {getActionIcon(action.icon)}
-                  <span>{action.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Context Actions - Compact Design */}
-      <div className="flex-shrink-0 px-6 py-4">
-        <ContextActions 
-          mode={mode} 
-          language={language} 
-          onAction={handleContextAction}
-          lastMessage={lastUserMessage}
-        />
-      </div>
-
       {/* Input Area - Modern AI Style */}
       <div className="flex-shrink-0 px-6 py-6 border-t border-white/10 bg-gradient-to-r from-slate-900/50 to-slate-800/50 backdrop-blur-sm">
         <div className="flex items-end space-x-4 max-w-4xl mx-auto">
@@ -896,7 +803,7 @@ export default function ChatInterface() {
               onKeyDown={handleKeyDown}
               placeholder={getPlaceholder()}
               rows={3}
-              className="w-full bg-white/5 backdrop-blur-sm text-white rounded-2xl px-6 py-4 pr-32 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white/10 transition-all resize-none border border-white/10 shadow-2xl placeholder-white/40"
+              className="w-full h-[56px] bg-[rgba(26,31,46,0.8)] backdrop-blur-[10px] text-white rounded-2xl px-6 py-4 pr-32 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:bg-white/10 transition-all resize-none border border-[rgba(74,158,255,0.3)] shadow-2xl placeholder-white/40"
               disabled={isStreaming || !sessionId}
             />
             

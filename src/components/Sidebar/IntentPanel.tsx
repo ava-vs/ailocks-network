@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Clock, Users, Zap, Star, Calendar, Filter, Database, AlertCircle, Crown, Bot, Search, Plus, Target, ChevronUp, ChevronDown, Bell } from 'lucide-react';
+import { MapPin, Clock, Users, Zap, Star, Calendar, Filter, Database, AlertCircle, Crown, Bot, Search, Plus, Target, ChevronUp, ChevronDown, Bell, FileText, Sparkles, Link } from 'lucide-react';
 import { useStore } from '@nanostores/react';
 import { appState } from '../../lib/store';
 import { useUserSession } from '../../hooks/useUserSession';
@@ -39,7 +39,7 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
   const [filter, setFilter] = useState('all');
   const [dataSource, setDataSource] = useState<'real' | 'mock' | 'error'>('mock');
   const [intentsExpanded, setIntentsExpanded] = useState(true);
-  const [newNotifications, setNewNotifications] = useState(1); // "Just Added" карточка считается как новое уведомление
+  const [newNotifications, setNewNotifications] = useState(3);
   const [ailockProfile, setAilockProfile] = useState<FullAilockProfile | null>(null);
 
   // Listen for new intents created from chat
@@ -47,7 +47,6 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
     const handleIntentCreated = (event: CustomEvent) => {
       const newIntent = event.detail;
       
-      // Check if this intent belongs to the current user
       if (newIntent.userId === currentUser.id) {
         const intentWithMetadata = {
           ...newIntent,
@@ -60,7 +59,6 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
         };
         
         setMyIntents(prev => [intentWithMetadata, ...prev]);
-        // Add notification for new intent
         setNewNotifications(prev => prev + 1);
       }
     };
@@ -69,7 +67,6 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
     return () => window.removeEventListener('intentCreated', handleIntentCreated as EventListener);
   }, [currentUser.id, currentUser.name]);
 
-  // Listen for user changes to refresh data
   useEffect(() => {
     const handleUserChanged = () => {
       fetchIntents();
@@ -79,12 +76,10 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
     return () => window.removeEventListener('userChanged', handleUserChanged);
   }, []);
 
-  // Reactive effect - refetch when location, filter, or user changes
   useEffect(() => {
     fetchIntents();
   }, [location, filter, currentUser.id]);
 
-  // Load Ailock profile
   useEffect(() => {
     if (currentUser.id && currentUser.id !== 'loading') {
       loadAilockProfile();
@@ -111,7 +106,6 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
         limit: '12'
       });
       
-      // Only add userId if it's valid (not loading)
       if (currentUser.id && currentUser.id !== 'loading') {
         params.append('userId', currentUser.id);
       }
@@ -125,7 +119,6 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
         console.log('✅ Real data received:', data);
         
         if (data.intents && data.intents.length > 0) {
-          // Separate intents into "mine" and "others"
           const myIntentsArray: Intent[] = [];
           const otherIntentsArray: Intent[] = [];
           
@@ -156,16 +149,13 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
         console.warn('⚠️ API response not ok:', response.status, response.statusText);
       }
       
-      // Fallback to mock data if real data fails or is empty
       console.log('📝 Using mock data as fallback');
       const mockData = getMockIntents(location);
       
-      // Separate mock data (for demo, assign some to current user)
       const myMockIntents: Intent[] = [];
       const otherMockIntents: Intent[] = [];
       
       mockData.forEach((intent, index) => {
-        // For demo: assign every 3rd intent to current user
         if (index % 3 === 0) {
           myMockIntents.push({ ...intent, isOwn: true, userName: currentUser.name });
         } else {
@@ -190,7 +180,6 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
 
   const calculateDistance = (userLocation: any, intent: any) => {
     if (userLocation.city === intent.targetCity && userLocation.country === intent.targetCountry) {
-      // Use deterministic distance based on intent ID to avoid hydration mismatch
       const hash = intent.id ? intent.id.charCodeAt(intent.id.length - 1) : 0;
       const miles = (hash % 5) + 1;
       const decimal = (hash % 9);
@@ -254,45 +243,14 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
         createdAt: '1 day ago',
         userName: 'Maria Garcia',
         isOwn: false
-      },
-      {
-        id: 'mock-4',
-        title: 'Data Science Consulting',
-        description: `Healthcare startup needs data scientist for predictive analytics implementation in ${currentLocation.country}`,
-        category: 'Analytics',
-        requiredSkills: ['Python', 'TensorFlow', 'Healthcare Data'],
-        budget: '$40k-70k',
-        timeline: '6-8 months',
-        priority: 'low',
-        matchScore: 72,
-        createdAt: '2 days ago',
-        userName: 'David Chen',
-        isOwn: false
-      },
-      {
-        id: 'mock-5',
-        title: 'Blockchain Development',
-        description: 'DeFi protocol seeking smart contract developers for new lending platform',
-        category: 'Blockchain',
-        requiredSkills: ['Solidity', 'Web3', 'DeFi'],
-        budget: '$80k-120k',
-        timeline: '8-12 months',
-        priority: 'medium',
-        matchScore: 68,
-        createdAt: '3 days ago',
-        userName: 'Sarah Johnson',
-        isOwn: false
       }
     ];
 
-    // Add deterministic location-aware distances to avoid hydration mismatch
     return baseIntents.map((intent, index) => {
       let distance;
       if (currentLocation.isDefault) {
-        // Use fixed distances for default location
-        distance = ['2.3 miles', '5.7 miles', '8.1 miles', '12.4 miles', '15.2 miles'][index];
+        distance = ['2.3 miles', '5.7 miles', '8.1 miles'][index];
       } else {
-        // Use deterministic distance based on intent ID
         const hash = intent.id.charCodeAt(intent.id.length - 1);
         const miles = (hash % 20) + 1;
         const decimal = (hash % 9);
@@ -381,15 +339,6 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
     }
   };
 
-  const getDataSourceColor = () => {
-    switch (dataSource) {
-      case 'real': return 'text-emerald-400 bg-emerald-500/20 border-emerald-500/30';
-      case 'mock': return 'text-blue-400 bg-blue-500/20 border-blue-500/30';
-      case 'error': return 'text-amber-400 bg-amber-500/20 border-amber-500/30';
-      default: return 'text-gray-400 bg-gray-500/20 border-gray-500/30';
-    }
-  };
-
   const getAvatarGradient = () => {
     if (!ailockProfile) return 'from-cyan-400 via-blue-400 to-indigo-400';
     if (ailockProfile.level >= 15) return 'from-purple-400 via-pink-400 to-yellow-400';
@@ -404,45 +353,52 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
   );
 
   return (
-    <div className={cn("flex flex-col h-full text-white p-2", !isExpanded && "items-center")}>
+    <div className={cn("flex flex-col h-full text-white", !isExpanded && "items-center p-2")}>
       {!isExpanded && (
-        <div className="flex flex-col items-center space-y-4 p-2">
+        <div className="flex flex-col items-center space-y-4 p-2 w-full">
+          {/* Toggle Button with Notification Badge */}
           <div 
-            className="w-12 h-12 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer relative"
+            className="relative w-[30px] h-[30px] rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer"
             onClick={() => {
-              // Clear all notifications when avatar is clicked
               setNewNotifications(0);
             }}
-            title={newNotifications > 0 ? `${newNotifications} new notification${newNotifications !== 1 ? 's' : ''}` : 'No new notifications'}
+            title={newNotifications > 0 ? `${newNotifications} new notification${newNotifications !== 1 ? 's' : ''}` : 'Intent Panel'}
           >
-            {/* Ailock Avatar with dynamic gradient border */}
-            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getAvatarGradient()} p-0.5 relative`}>
-              <div className="w-full h-full rounded-lg bg-slate-800/90 flex items-center justify-center">
-                <img 
-                  src="/images/ailock-avatar.png"
-                  alt="Ailock Avatar" 
-                  className="w-6 h-6 object-contain"
-                />
-              </div>
-              {/* Level badge */}
-              {ailockProfile && (
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center justify-center border border-slate-800">
-                  {ailockProfile.level}
-                </div>
-              )}
+            <div className="w-6 h-6 text-transparent bg-gradient-to-br from-[#E4F0FE] to-[#2A8ED7] bg-clip-text">
+              <FileText className="w-6 h-6" />
             </div>
-            {/* Notification Badge */}
             {newNotifications > 0 && (
-              <div className="absolute -top-1 -left-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center shadow-lg border border-slate-800">
-                <span className="text-xs font-medium text-white">{newNotifications}</span>
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center shadow-lg border border-slate-800">
+                <span className="text-[8px] font-medium text-white">{newNotifications}</span>
               </div>
             )}
+          </div>
+
+          {/* Documents Icon */}
+          <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer">
+            <div className="w-6 h-6 text-transparent bg-gradient-to-br from-[#E4F0FE]/70 to-[#2A8ED7]/70 bg-clip-text hover:from-[#E4F0FE] hover:to-[#2A8ED7]">
+              <FileText className="w-6 h-6" />
+            </div>
+          </div>
+
+          {/* AI Tools Icon */}
+          <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer">
+            <div className="w-6 h-6 text-transparent bg-gradient-to-br from-[#E4F0FE]/70 to-[#2A8ED7]/70 bg-clip-text hover:from-[#E4F0FE] hover:to-[#2A8ED7]">
+              <Sparkles className="w-6 h-6" />
+            </div>
+          </div>
+
+          {/* Intents Icon */}
+          <div className="w-[30px] h-[30px] rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors cursor-pointer">
+            <div className="w-6 h-6 text-transparent bg-gradient-to-br from-[#E4F0FE]/70 to-[#2A8ED7]/70 bg-clip-text hover:from-[#E4F0FE] hover:to-[#2A8ED7]">
+              <Link className="w-6 h-6" />
+            </div>
           </div>
         </div>
       )}
 
       {isExpanded && (
-        <div className="p-2 space-y-4">
+        <div className="p-4 space-y-6 w-full">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-white">In Work</h3>
             <div className="flex items-center gap-2">
@@ -460,16 +416,15 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
           </div>
 
           {/* Ailock Widget */}
-          <div className="mb-4">
+          <div className="mb-6">
             <AilockWidget />
           </div>
 
           {/* Work Items */}
           <div className="space-y-3">
             <div 
-              className="glass-morphism rounded-xl p-4 hover-glow cursor-pointer transition-all"
+              className="bg-[rgba(26,31,46,0.6)] backdrop-blur-[20px] border border-white/10 rounded-xl p-4 hover:shadow-[0_0_20px_rgba(74,158,255,0.1)] cursor-pointer transition-all"
               onClick={() => {
-                // Mark as read when clicked
                 if (newNotifications > 0) {
                   setNewNotifications(prev => Math.max(0, prev - 1));
                 }
@@ -500,7 +455,6 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
                   className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs font-medium hover:bg-yellow-500/30 transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
-                    // Handle notify action
                   }}
                 >
                   🔔 Notify
@@ -509,7 +463,6 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
                   className="px-3 py-1 bg-green-500/20 text-green-400 rounded text-xs font-medium hover:bg-green-500/30 transition-colors"
                   onClick={(e) => {
                     e.stopPropagation();
-                    // Handle active action
                   }}
                 >
                   ✅ Active
@@ -519,7 +472,7 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
           </div>
 
           {/* Intents Section */}
-          <div className="glass-morphism rounded-xl p-4">
+          <div className="bg-[rgba(26,31,46,0.6)] backdrop-blur-[20px] border border-white/10 rounded-xl p-4">
             <button 
               onClick={() => setIntentsExpanded(!intentsExpanded)}
               className="flex items-center justify-between w-full mb-3"
@@ -576,7 +529,7 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
                 ) : (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {myIntents.map(intent => (
-                      <div key={intent.id} className="p-2 glass-morphism rounded-lg">
+                      <div key={intent.id} className="p-2 bg-[rgba(26,31,46,0.6)] backdrop-blur-[20px] border border-white/10 rounded-lg">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs font-medium text-white">{intent.title}</span>
                           <span className="text-xs text-green-400">{intent.matchScore}%</span>
@@ -586,7 +539,7 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
                     ))}
                     
                     {filteredOtherIntents.slice(0, 3).map(intent => (
-                      <div key={intent.id} className="p-2 glass-morphism rounded-lg">
+                      <div key={intent.id} className="p-2 bg-[rgba(26,31,46,0.6)] backdrop-blur-[20px] border border-white/10 rounded-lg">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs font-medium text-white">{intent.title}</span>
                           <span className="text-xs text-green-400">{intent.matchScore}%</span>
@@ -604,50 +557,3 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
     </div>
   );
 }
-
-const IntentCard = ({ intent, texts, getPriorityColor }: { intent: Intent, texts: any, getPriorityColor: (p:string) => string }) => (
-  <div className="glass-morphism rounded-xl p-4 hover-glow cursor-pointer transition-all">
-    <div className="flex items-start justify-between mb-2">
-      <h4 className="font-medium text-sm text-white flex-1 pr-2">{intent.title}</h4>
-      <div className="flex items-center gap-1">
-        <span className="text-xs text-blue-400">
-          {intent.matchScore}% match
-        </span>
-      </div>
-    </div>
-    
-    <div className="flex items-center gap-2 mb-3">
-      <span className="text-xs text-white/60">Rating:</span>
-      <span className="text-xs text-yellow-400">
-        {Math.round((intent.matchScore / 100) * 5 * 10) / 10}/5
-      </span>
-    </div>
-    
-    <p className="text-xs text-white/60 mb-3 line-clamp-2">
-      {intent.description}
-    </p>
-    
-    <div className="flex gap-2">
-      <button className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded text-xs font-medium hover:bg-yellow-500/30 transition-colors">
-        🔔 Notify
-      </button>
-      {intent.isOwn ? (
-        <button className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded text-xs font-medium hover:bg-blue-500/30 transition-colors">
-          ✏️ Edit
-        </button>
-      ) : (
-        <button className="px-3 py-1 bg-green-500/20 text-green-400 rounded text-xs font-medium hover:bg-green-500/30 transition-colors">
-          ✅ Connect
-        </button>
-      )}
-    </div>
-    
-    <div className="flex items-center justify-between text-xs text-white/40 mt-2 pt-2 border-t border-white/10">
-      <div className="flex items-center space-x-1">
-        <MapPin size={12} />
-        <span>{intent.distance}</span>
-      </div>
-      <span>{intent.createdAt}</span>
-    </div>
-  </div>
-);
