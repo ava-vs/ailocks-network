@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { MapPin, Clock, Users, Zap, Star, Calendar, Filter, Database, AlertCircle, Crown, Bot, Search, Plus, Target, ChevronUp, ChevronDown, Bell, FileText, Sparkles, Link, X } from 'lucide-react';
 import { useStore } from '@nanostores/react';
 import { appState } from '../../lib/store';
@@ -35,10 +35,13 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
   const [otherIntents, setOtherIntents] = useState<Intent[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
-  const [dataSource, setDataSource] = useState<'real' | 'mock' | 'error'>('mock');
+  const [dataSource, setDataSource] = useState<'mock' | 'real'>('mock');
   const [intentsExpanded, setIntentsExpanded] = useState(true);
   const [newNotifications, setNewNotifications] = useState(3);
   const [isRightPanelExpanded, setIsRightPanelExpanded] = useState(false);
+  const [intents, setIntents] = useState<Intent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Listen for new intents created from chat
   useEffect(() => {
@@ -65,6 +68,42 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
     return () => window.removeEventListener('intentCreated', handleIntentCreated as EventListener);
   }, [currentUser.id, currentUser.name]);
 
+  // Listen for voice and text search results
+  useEffect(() => {
+    const handleSearchResults = (event: CustomEvent) => {
+      console.log('VoicePanel received results:', event.detail);
+      const { query, results } = event.detail;
+
+      if (query) {
+        setSearchTerm(query);
+      }
+
+      if (results && Array.isArray(results)) {
+         const processedResults = results.map((intent: any) => ({
+          ...intent,
+          distance: calculateDistance(location, intent),
+          matchScore: intent.matchScore || Math.floor(Math.random() * 30) + 70,
+          createdAt: intent.createdAt || 'Unknown',
+          userName: intent.userName || 'Anonymous',
+          budget: intent.budget ? `$${Math.floor(intent.budget / 1000)}k` : null,
+          isOwn: intent.userId === currentUser.id
+        }));
+        setOtherIntents(processedResults);
+        setMyIntents([]); // Clear own intents when showing search results
+        setDataSource('real');
+        setLoading(false);
+      }
+    };
+
+    window.addEventListener('voice-search-results', handleSearchResults as EventListener);
+    window.addEventListener('text-search-results', handleSearchResults as EventListener);
+
+    return () => {
+      window.removeEventListener('voice-search-results', handleSearchResults as EventListener);
+      window.removeEventListener('text-search-results', handleSearchResults as EventListener);
+    };
+  }, [currentUser.id, location]);
+
   useEffect(() => {
     const handleUserChanged = () => {
       fetchIntents();
@@ -76,12 +115,11 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
 
   useEffect(() => {
     fetchIntents();
-  }, [location, filter, currentUser.id]);
+  }, [location, currentUser.id]);
 
-  const fetchIntents = async () => {
+  const fetchIntents = async (query = '') => {
+    setIsLoading(true);
     try {
-      setLoading(true);
-      
       const params = new URLSearchParams({
         userCountry: location.country,
         userCity: location.city,
@@ -126,6 +164,7 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
           setOtherIntents(otherIntentsArray);
           setDataSource('real');
           setLoading(false);
+          setIntents(data.intents);
           return;
         }
       } else {
@@ -150,12 +189,11 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
       setOtherIntents(otherMockIntents);
       setDataSource('mock');
       
-    } catch (err) {
-      console.warn('⚠️ Error fetching real data, using mock data:', err);
-      const mockData = getMockIntents(location);
-      setMyIntents([]);
-      setOtherIntents(mockData);
-      setDataSource('error');
+    } catch (error) {
+      console.error("Failed to fetch intents:", error);
+      const mockData = intents.map(i => ({...i}));
+      setIntents(mockData);
+      setDataSource('mock');
     } finally {
       setLoading(false);
     }
@@ -461,6 +499,8 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
             </div>
           )}
         </div>
+
+        {searchTerm && <div className="p-2 text-sm text-gray-500">{searchTerm}</div>}
       </div>
     </div>
   );

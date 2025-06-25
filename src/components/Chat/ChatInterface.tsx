@@ -17,6 +17,7 @@ interface Message {
   role: 'user' | 'assistant';
   timestamp: Date;
   mode: string;
+  intents?: IntentCard[];
 }
 
 interface SuggestedAction {
@@ -73,7 +74,6 @@ export default function ChatInterface() {
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
   const [lastUserMessage, setLastUserMessage] = useState<string>('');
   const [ailockStatus, setAilockStatus] = useState<'unknown' | 'available' | 'unavailable'>('unknown');
-  const [foundIntents, setFoundIntents] = useState<IntentCard[]>([]);
   const [demoUsersSeeded, setDemoUsersSeeded] = useState(false);
   const [ailockProfile, setAilockProfile] = useState<FullAilockProfile | null>(null);
   const [levelUpInfo, setLevelUpInfo] = useState<{ newLevel: number, skillPointsGained: number, xpGained: number } | null>(null);
@@ -90,7 +90,7 @@ export default function ChatInterface() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, showIntentPreview, foundIntents]);
+  }, [messages, showIntentPreview]);
 
   // Seed demo users on component mount
   useEffect(() => {
@@ -279,7 +279,6 @@ export default function ChatInterface() {
     setIsStreaming(true);
     setError(null);
     setSuggestedActions([]);
-    setFoundIntents([]);
 
     try {
       await sendAilockMessage(userMessage);
@@ -374,7 +373,18 @@ export default function ChatInterface() {
                         msg.id === assistantMessage.id ? { ...assistantMessage } : msg
                       ));
                     } else if (parsed.type === 'intents') {
-                      setFoundIntents(parsed.intents);
+                      // Send all results to the side panel
+                      window.dispatchEvent(new CustomEvent('text-search-results', { 
+                        detail: { 
+                          query: lastUserMessage,
+                          results: parsed.intents 
+                        } 
+                      }));
+                      
+                      // Attach top 3 results to the message for rendering in chat
+                      setMessages(prev => prev.map(msg => 
+                        msg.id === assistantMessage.id ? { ...assistantMessage, intents: parsed.intents.slice(0, 3) } : msg
+                      ));
                     } else if (parsed.type === 'actions') {
                       setSuggestedActions(parsed.actions);
                     } else if (parsed.type === 'error') {
@@ -638,6 +648,51 @@ export default function ChatInterface() {
     setInput('');
   };
 
+  useEffect(() => {
+    // Обработчик для текстовых сообщений от голоса
+    const handleVoiceMessage = (event: CustomEvent) => {
+      const { source, message } = event.detail;
+      const role = source === 'user' ? 'user' : 'assistant';
+      const newMessage: Message = { 
+        role, 
+        content: message, 
+        id: Date.now().toString(),
+        timestamp: new Date(),
+        mode: 'text'
+      };
+      setMessages(prev => [...prev, newMessage]);
+    };
+
+    // Обработчик для карточек интентов
+    const handleIntentCards = (event: CustomEvent) => {
+      const { intents } = event.detail;
+      const newCardsMessage: Message = { 
+        role: 'assistant', 
+        content: 'Вот что я нашел:',
+        intents: intents,
+        id: Date.now().toString(),
+        timestamp: new Date(),
+        mode: 'text',
+      };
+      setMessages(prev => [...prev, newCardsMessage]);
+    };
+
+    // Обработчик старта сессии
+    const handleVoiceSessionStart = () => {
+      console.log('Voice session started, notified main chat.');
+    };
+
+    window.addEventListener('add-message-to-chat', handleVoiceMessage as EventListener);
+    window.addEventListener('display-results-in-chat', handleIntentCards as EventListener);
+    window.addEventListener('voice-session-started', handleVoiceSessionStart as EventListener);
+
+    return () => {
+      window.removeEventListener('add-message-to-chat', handleVoiceMessage as EventListener);
+      window.removeEventListener('display-results-in-chat', handleIntentCards as EventListener);
+      window.removeEventListener('voice-session-started', handleVoiceSessionStart as EventListener);
+    };
+  }, []); // Пустой массив зависимостей, чтобы это выполнилось один раз
+
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-slate-900/95 to-slate-800/95 backdrop-blur-xl">
       {/* Messages Area */}
@@ -684,79 +739,78 @@ export default function ChatInterface() {
         ) : (
           <div className="max-w-4xl mx-auto">
             {messages.map(message => (
-              <MessageBubble 
-                key={message.id} 
-                message={message} 
-                isStreaming={streamingMessageId === message.id}
-              />
-            ))}
-            
-            {/* Intent Cards Display */}
-            {foundIntents.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-white font-semibold mb-4 flex items-center space-x-2">
-                  <Bot className="w-5 h-5 text-blue-400" />
-                  <span>Found Opportunities</span>
-                </h3>
-                <div className="grid gap-4">
-                  {foundIntents.map((intent) => (
-                    <div 
-                      key={intent.id}
-                      onClick={() => handleIntentCardClick(intent)}
-                      className="bg-gradient-to-br from-blue-500/10 to-indigo-600/10 border border-blue-500/30 rounded-xl p-4 cursor-pointer hover:from-blue-500/20 hover:to-indigo-600/20 transition-all shadow-lg hover:shadow-xl"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <h4 className="text-white font-medium text-sm flex-1">
-                          {intent.title}
-                        </h4>
-                        <div className="flex items-center space-x-2 ml-2">
-                          <div className="flex items-center space-x-1 bg-blue-500/20 text-blue-400 px-2 py-1 rounded-lg border border-blue-500/30">
-                            <span className="text-xs font-medium">{intent.matchScore}% match</span>
-                          </div>
-                          {intent.priority === 'urgent' && (
-                            <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg border text-xs ${getPriorityColor(intent.priority)}`}>
-                              <span className="font-medium">Urgent</span>
+              <React.Fragment key={message.id}>
+                <MessageBubble 
+                  message={message} 
+                  isStreaming={streamingMessageId === message.id}
+                />
+                {message.role === 'assistant' && message.intents && message.intents.length > 0 && (
+                  <div className="mb-6 ml-12">
+                    <div className="grid gap-4">
+                      {message.intents.map((intent: IntentCard) => (
+                        <div 
+                          key={intent.id}
+                          onClick={() => handleIntentCardClick(intent)}
+                          className="bg-gradient-to-br from-blue-500/10 to-indigo-600/10 border border-blue-500/30 rounded-xl p-4 cursor-pointer hover:from-blue-500/20 hover:to-indigo-600/20 transition-all shadow-lg hover:shadow-xl"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <h4 className="text-white font-medium text-sm flex-1">
+                              {intent.title}
+                            </h4>
+                            <div className="flex items-center space-x-2 ml-2">
+                              {intent.matchScore && (
+                                <div className="flex items-center space-x-1 bg-blue-500/20 text-blue-400 px-2 py-1 rounded-lg border border-blue-500/30">
+                                  <span className="text-xs font-medium">{intent.matchScore}% match</span>
+                                </div>
+                              )}
+                              {intent.priority === 'urgent' && (
+                                <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg border text-xs ${getPriorityColor(intent.priority)}`}>
+                                  <span className="font-medium">Urgent</span>
+                                </div>
+                              )}
                             </div>
-                          )}
+                          </div>
+                          
+                          <p className="text-white/60 text-xs leading-relaxed mb-3">
+                            {intent.description}
+                          </p>
+                          
+                          <div className="flex flex-wrap gap-1 mb-3">
+                            {intent.requiredSkills.slice(0, 3).map((skill) => (
+                              <span 
+                                key={skill}
+                                className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded-md text-xs font-medium border border-purple-500/30"
+                              >
+                                {skill}
+                              </span>
+                            ))}
+                            {intent.requiredSkills.length > 3 && (
+                              <span className="text-white/40 text-xs px-2 py-1">
+                                +{intent.requiredSkills.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center justify-between text-xs">
+                            {intent.distance && (
+                              <div className="flex items-center space-x-2 text-white/50">
+                                <MapPin className="w-3 h-3" />
+                                <span>{intent.distance}</span>
+                              </div>
+                            )}
+                            {intent.budget && (
+                              <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded border border-emerald-500/30">
+                                {intent.budget}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      
-                      <p className="text-white/60 text-xs leading-relaxed mb-3">
-                        {intent.description}
-                      </p>
-                      
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {intent.requiredSkills.slice(0, 3).map((skill) => (
-                          <span 
-                            key={skill}
-                            className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded-md text-xs font-medium border border-purple-500/30"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                        {intent.requiredSkills.length > 3 && (
-                          <span className="text-white/40 text-xs px-2 py-1">
-                            +{intent.requiredSkills.length - 3} more
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center space-x-2 text-white/50">
-                          <MapPin className="w-3 h-3" />
-                          <span>{intent.distance}</span>
-                        </div>
-                        {intent.budget && (
-                          <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded border border-emerald-500/30">
-                            {intent.budget}
-                          </span>
-                        )}
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  </div>
+                )}
+              </React.Fragment>
+            ))}
             
             {/* Intent Preview */}
             {showIntentPreview && intentPreview && (

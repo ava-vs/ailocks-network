@@ -3,6 +3,7 @@ import Header from '@/components/Header.tsx';
 import CollapsibleNavigationSidebar from '@/components/Sidebar/NavigationSidebar';
 import CollapsibleIntentPanel from '@/components/Sidebar/CollapsibleIntentPanel';
 import StatusBar from '@/components/StatusBar.tsx';
+import VoiceAgentWidget from '@/components/VoiceAgentWidget.tsx';
 import '@/index.css';
 
 export interface Props {
@@ -62,5 +63,8 @@ const { title, description = "Advanced AI collaboration platform with geo-intell
     <div class="fixed bottom-4 left-4 right-4 md:left-[60px] md:right-[60px]">
       <StatusBar client:load />
     </div>
+
+    <!-- Voice Agent Widget (for Pro and Premium users) -->
+    <VoiceAgentWidget client:only="react" />
   </body>
 </html>

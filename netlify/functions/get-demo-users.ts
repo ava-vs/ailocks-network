@@ -7,7 +7,7 @@ import { inArray } from 'drizzle-orm';
 // not reachable (e.g. when developing offline or Neon is down).
 const FALLBACK_USERS = [
   {
-    id: 'd9c1b3a3-b4e8-4b5a-9b4b-9b4b9b4b9b4a',
+    id: '6f3f3134-dd24-4665-b6cd-f9caf57d859f',
     name: 'Lirea',
     email: 'lirea.designer@example.com',
     country: 'BR',
@@ -15,7 +15,7 @@ const FALLBACK_USERS = [
     timezone: 'America/Sao_Paulo',
   },
   {
-    id: 'a8b2c4d5-e6f7-4a9b-8c1d-8c1d8c1d8c1d',
+    id: '6376f30a-1ee4-4aa9-bdde-dd9ac0be6f24',
     name: 'Marco',
     email: 'marco.manager@fintechrio.com',
     country: 'BR',

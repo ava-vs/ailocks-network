@@ -73,6 +73,10 @@ async function initializeUserSession() {
     });
     console.log('✅ User session initialized. Current user:', userToSet.name);
 
+    if (userToSet.name === 'Lirea') {
+      localStorage.setItem('userPlan', 'pro');
+    }
+
   } catch (error) {
     console.warn('⚠️ DB connection failed, using mock user data as fallback:', error);
 
@@ -116,6 +120,10 @@ async function initializeUserSession() {
       isDefault: false
     });
     console.log('✅ User session initialized with mock data. Current user:', userToSet.name);
+
+    if (userToSet.name === 'Lirea') {
+      localStorage.setItem('userPlan', 'pro');
+    }
   }
 }
 
