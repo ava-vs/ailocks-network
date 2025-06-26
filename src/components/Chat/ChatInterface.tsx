@@ -525,6 +525,87 @@ export default function ChatInterface() {
     inputRef.current?.focus();
   };
 
+  // CRITICAL FIX 5: Voice Activation for Central Ailock
+  const handleVoiceClick = () => {
+    if (voiceState === 'idle') {
+      setVoiceState('listening');
+      setTimeout(() => {
+        setVoiceState('processing');
+        setTimeout(() => {
+          setVoiceState('speaking');
+          setTimeout(() => setVoiceState('idle'), 2000);
+        }, 1500);
+      }, 3000);
+    }
+  };
+
+  // Voice Ailock Component
+  const VoiceAilock = () => (
+    <div className="relative cursor-pointer" onClick={handleVoiceClick}>
+      {/* Sound waves animation when listening */}
+      {voiceState === 'listening' && (
+        <>
+          <div className="absolute w-32 h-32 border-2 border-red-400/40 rounded-full voice-listening-wave-1" 
+               style={{animationDuration: '1s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
+          <div className="absolute w-40 h-40 border border-red-300/30 rounded-full voice-listening-wave-2" 
+               style={{animationDuration: '1.5s', animationDelay: '0.2s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
+          <div className="absolute w-48 h-48 border border-red-200/20 rounded-full voice-listening-wave-3" 
+               style={{animationDuration: '2s', animationDelay: '0.4s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
+          <div className="absolute w-36 h-36 bg-red-500/20 rounded-full blur-xl animate-pulse" style={{left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
+        </>
+      )}
+      
+      {/* Processing animation */}
+      {voiceState === 'processing' && (
+        <div className="absolute w-32 h-32 border-2 border-yellow-400/40 rounded-full voice-processing" style={{left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
+      )}
+      
+      {/* Speaking animation */}
+      {voiceState === 'speaking' && (
+        <div className="absolute w-32 h-32 border-2 border-green-400/40 rounded-full voice-speaking" style={{left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
+      )}
+      
+      {/* Ailock character */}
+      <img src="/images/ailock-character.png" 
+           className={`w-24 h-24 object-contain z-10 transition-all duration-300 ${
+             voiceState !== 'idle' ? 'scale-110 drop-shadow-2xl' : 'hover:scale-105'
+           }`}
+           alt="Ailock" 
+           style={{aspectRatio: '1/1', border: 'none', outline: 'none'}} />
+      
+      {/* Voice state indicator */}
+      <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-center">
+        <span className="bg-slate-700 text-white text-xs px-3 py-1 rounded-full">
+          {voiceState === 'idle' && 'Click to speak'}
+          {voiceState === 'listening' && '🔴 Listening...'}
+          {voiceState === 'processing' && '⚡ Processing...'}
+          {voiceState === 'speaking' && '🗣️ Speaking...'}
+        </span>
+      </div>
+    </div>
+  );
+
+  // CRITICAL FIX 5: Floating Voice Button (Alternative)
+  const FloatingVoiceButton = () => (
+    <button 
+      onClick={handleVoiceClick}
+      className={`fixed bottom-24 right-8 w-16 h-16 rounded-full shadow-2xl z-50 
+                flex items-center justify-center transition-all duration-300 ${
+        voiceState === 'listening' 
+          ? 'bg-red-500 animate-pulse scale-110' 
+          : 'bg-blue-500 hover:bg-blue-600 hover:scale-105'
+      }`}
+    >
+      {/* Microphone Icon */}
+      <Mic className="w-8 h-8 text-white" />
+      
+      {/* Pulse animation when listening */}
+      {voiceState === 'listening' && (
+        <div className="absolute inset-0 rounded-full border-4 border-red-300/50 animate-ping"></div>
+      )}
+    </button>
+  );
+
   const getModeDescription = (mode: string) => {
     const descriptions: Record<string, Record<string, string>> = {
       en: {
@@ -665,65 +746,6 @@ export default function ChatInterface() {
     setLanguage(newLang);
     setInput('');
   };
-
-  // CRITICAL FIX 5: Voice Activation for Central Ailock
-  const handleVoiceClick = () => {
-    if (voiceState === 'idle') {
-      setVoiceState('listening');
-      setTimeout(() => {
-        setVoiceState('processing');
-        setTimeout(() => {
-          setVoiceState('speaking');
-          setTimeout(() => setVoiceState('idle'), 2000);
-        }, 1500);
-      }, 3000);
-    }
-  };
-
-  // Voice Ailock Component
-  const VoiceAilock = () => (
-    <div className="relative cursor-pointer" onClick={handleVoiceClick}>
-      {/* Sound waves animation when listening */}
-      {voiceState === 'listening' && (
-        <>
-          <div className="absolute w-32 h-32 border-2 border-red-400/40 rounded-full voice-listening-wave-1" 
-               style={{animationDuration: '1s'}}></div>
-          <div className="absolute w-40 h-40 border border-red-300/30 rounded-full voice-listening-wave-2" 
-               style={{animationDuration: '1.5s', animationDelay: '0.2s'}}></div>
-          <div className="absolute w-48 h-48 border border-red-200/20 rounded-full voice-listening-wave-3" 
-               style={{animationDuration: '2s', animationDelay: '0.4s'}}></div>
-          <div className="absolute w-36 h-36 bg-red-500/20 rounded-full blur-xl animate-pulse"></div>
-        </>
-      )}
-      
-      {/* Processing animation */}
-      {voiceState === 'processing' && (
-        <div className="absolute w-32 h-32 border-2 border-yellow-400/40 rounded-full voice-processing"></div>
-      )}
-      
-      {/* Speaking animation */}
-      {voiceState === 'speaking' && (
-        <div className="absolute w-32 h-32 border-2 border-green-400/40 rounded-full voice-speaking"></div>
-      )}
-      
-      {/* Ailock character */}
-      <img src="/images/ailock-character.png" 
-           className={`w-24 h-24 z-10 transition-all duration-300 ${
-             voiceState !== 'idle' ? 'scale-110 drop-shadow-2xl' : 'hover:scale-105'
-           }`}
-           alt="Ailock" 
-           style={{border: 'none', outline: 'none'}} />
-      
-      {/* Voice state indicator */}
-      <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 
-                      bg-slate-700 text-white text-xs px-3 py-1 rounded-full">
-        {voiceState === 'idle' && '🎤 Click to speak'}
-        {voiceState === 'listening' && '🔴 Listening...'}
-        {voiceState === 'processing' && '⚡ Processing...'}
-        {voiceState === 'speaking' && '🗣️ Speaking...'}
-      </div>
-    </div>
-  );
 
   useEffect(() => {
     // Обработчик для текстовых сообщений от голоса
@@ -991,6 +1013,9 @@ export default function ChatInterface() {
           xpGained={levelUpInfo.xpGained}
         />
       )}
+
+      {/* CRITICAL FIX 5: Floating Voice Button (Alternative) */}
+      <FloatingVoiceButton />
     </div>
   );
 }
