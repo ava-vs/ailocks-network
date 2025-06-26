@@ -25,9 +25,10 @@ interface Intent {
 
 interface IntentPanelProps {
   isExpanded?: boolean;
+  setIsRightPanelExpanded?: (expanded: boolean) => void;
 }
 
-export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
+export default function IntentPanel({ isExpanded = false, setIsRightPanelExpanded }: IntentPanelProps) {
   const { language, userLocation: location } = useStore(appState);
   const { currentUser } = useUserSession();
   
@@ -38,7 +39,7 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
   const [dataSource, setDataSource] = useState<'mock' | 'real'>('mock');
   const [intentsExpanded, setIntentsExpanded] = useState(true);
   const [newNotifications, setNewNotifications] = useState(3);
-  const [isRightPanelExpanded, setIsRightPanelExpanded] = useState(false);
+  const [isRightPanelExpanded] = useState(false);
   const [intents, setIntents] = useState<Intent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -296,7 +297,9 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
           {/* Toggle Button with Notification Badge */}
           <button 
             onClick={() => {
-              setIsRightPanelExpanded(!isRightPanelExpanded);
+              if (setIsRightPanelExpanded) {
+                setIsRightPanelExpanded(true);
+              }
               setNewNotifications(0);
             }}
             className="relative w-12 h-12 flex items-center justify-center rounded-lg hover:bg-slate-700/50 transition-colors"
@@ -311,20 +314,6 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
               </span>
             )}
           </button>
-
-          {/* Documents Icon */}
-          <div className="w-12 h-12 flex items-center justify-center rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer">
-            <svg className="w-6 h-6 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
-            </svg>
-          </div>
-
-          {/* AI Tools Icon */}
-          <div className="w-12 h-12 flex items-center justify-center rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer">
-            <svg className="w-6 h-6 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1z" />
-            </svg>
-          </div>
 
           {/* Intents Icon */}
           <div className="w-12 h-12 flex items-center justify-center rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer">
@@ -354,7 +343,11 @@ export default function IntentPanel({ isExpanded = false }: IntentPanelProps) {
               <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
             )}
             <button
-              onClick={() => setIsRightPanelExpanded(false)}
+              onClick={() => {
+                if (setIsRightPanelExpanded) {
+                  setIsRightPanelExpanded(false);
+                }
+              }}
               className="p-1 hover:bg-white/10 rounded transition-colors"
             >
               <X className="w-4 h-4 text-white/60" />
