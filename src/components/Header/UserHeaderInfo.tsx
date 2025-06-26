@@ -54,7 +54,11 @@ export default function UserHeaderInfo() {
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center space-x-2 hover:text-white transition-colors"
           >
-            <span>{currentUser.name} • {getUserRole()}</span>
+            {/* CRITICAL FIX 2: Add green indicator to Lirea */}
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              <span>{currentUser.name} • {getUserRole()}</span>
+            </div>
             {demoUsersLoaded && (
               <ChevronDown 
                 className={`w-3 h-3 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} 
@@ -104,7 +108,11 @@ export default function UserHeaderInfo() {
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center space-x-1 hover:text-white transition-colors"
           >
-            <span>{currentUser.name}</span>
+            {/* CRITICAL FIX 2: Add green indicator to Lirea */}
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              <span>{currentUser.name}</span>
+            </div>
             {demoUsersLoaded && (
               <ChevronDown 
                 className={`w-3 h-3 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} 

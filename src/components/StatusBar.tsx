@@ -56,7 +56,7 @@ export default function StatusBar() {
   };
 
   return (
-    <div className="w-full h-12 bg-slate-900/95 backdrop-blur border border-gray-700 rounded-lg flex items-center justify-between px-6 z-60 relative">
+    <div className="status-bar flex items-center justify-between px-6">
       {/* LEFT STATUS */}
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">

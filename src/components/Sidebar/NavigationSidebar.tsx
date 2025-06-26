@@ -50,28 +50,29 @@ function NavigationSidebar({ isExpanded = false }: NavigationSidebarProps) {
   return (
     <div className="flex flex-col h-full p-2 text-white">
       <nav className="flex-grow space-y-2">
+        {/* CRITICAL FIX 3: Menu Icons - Light Gradients */}
         <NavLink href="/" isExpanded={isExpanded} isActive={pathname === '/'}>
-          <Home className="w-5 h-5 text-blue-400" />
+          <Home className="w-5 h-5 sidebar-icon" />
           {isExpanded && <span className="font-medium whitespace-nowrap">Home</span>}
         </NavLink>
 
         <NavLink href="/query-history" isExpanded={isExpanded} isActive={pathname === '/query-history'}>
-          <Search className="w-5 h-5 text-blue-400" />
+          <Search className="w-5 h-5 sidebar-icon" />
           {isExpanded && <span className="font-medium whitespace-nowrap">Query History</span>}
         </NavLink>
 
         <NavLink href="/saved-intents" isExpanded={isExpanded} isActive={pathname === '/saved-intents'}>
-          <Star className="w-5 h-5 text-blue-400" />
+          <Star className="w-5 h-5 sidebar-icon" />
           {isExpanded && <span className="font-medium whitespace-nowrap">Starred</span>}
         </NavLink>
 
         <NavLink href="/recent" isExpanded={isExpanded} isActive={pathname === '/recent'}>
-          <Clock className="w-5 h-5 text-blue-400" />
+          <Clock className="w-5 h-5 sidebar-icon" />
           {isExpanded && <span className="font-medium whitespace-nowrap">Recent</span>}
         </NavLink>
 
         <NavLink href="/my-ailock" isExpanded={isExpanded} isActive={pathname === '/my-ailock'}>
-          <User className="w-5 h-5 text-blue-400" />
+          <User className="w-5 h-5 sidebar-icon" />
           {isExpanded && <span className="font-medium whitespace-nowrap">My Ailock</span>}
         </NavLink>
 
@@ -105,7 +106,7 @@ function NavigationSidebar({ isExpanded = false }: NavigationSidebarProps) {
             "flex items-center",
             isExpanded ? "px-4 gap-3" : "justify-center w-full"
           )}>
-            <LogOut className="w-5 h-5 text-blue-400" />
+            <LogOut className="w-5 h-5 sidebar-icon" />
             {isExpanded && <span className="font-medium">Logout</span>}
           </div>
         </button>
