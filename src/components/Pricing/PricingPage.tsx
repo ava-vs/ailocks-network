@@ -309,7 +309,7 @@ export default function PricingPage() {
   }
 
   const PricingCard = ({ plan }: { plan: PricingPlan }) => (
-    <div className={`pricing-card ${plan.badge ? 'featured' : ''}`}>
+    <div className={`pricing-card ${plan.highlighted ? 'border-blue-400/30' : ''} ${plan.badge ? 'featured' : ''}`}>
       {/* Badge */}
       {plan.badge && (
         <div className="most-popular-badge">
