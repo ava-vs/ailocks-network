@@ -3,6 +3,7 @@ import Header from '@/components/Header.tsx';
 import CollapsibleNavigationSidebar from '@/components/Sidebar/NavigationSidebar';
 import CollapsibleIntentPanel from '@/components/Sidebar/CollapsibleIntentPanel';
 import StatusBar from '@/components/StatusBar.tsx';
+import GlobalToaster from '@/components/GlobalToaster.tsx';
 import '@/index.css';
 
 export interface Props {
@@ -60,5 +61,8 @@ const { title, description = "Advanced AI collaboration platform with geo-intell
 
     <!-- Status Bar - with proper spacing to avoid sidebar overlap -->
     <StatusBar client:load />
+
+    <!-- Global toast notifications -->
+    <GlobalToaster client:load />
   </body>
 </html>

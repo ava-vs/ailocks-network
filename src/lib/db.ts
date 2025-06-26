@@ -2,9 +2,24 @@ import { drizzle } from 'drizzle-orm/neon-http';
 import { neon } from '@neondatabase/serverless';
 import * as schema from './schema';
 
-// Use Netlify's automatic DATABASE_URL if available, fallback to custom env
-const sql = neon(process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL!);
-export const db = drizzle(sql, { schema });
+function createDb() {
+  const sql = neon(process.env.DATABASE_URL || process.env.NETLIFY_DATABASE_URL!);
+  return drizzle(sql, { schema });
+}
+
+// Exported as mutable binding so other modules observe updates after refresh
+export let db = createDb();
+
+/**
+ * Explicitly re-creates the Neon HTTP client and Drizzle instance.
+ * Use this when a transient network error (e.g. `fetch failed`) occurs so
+ * subsequent queries get a fresh connection. The function returns the new
+ * db instance for convenience.
+ */
+export function refreshDbConnection() {
+  db = createDb();
+  return db;
+}
 
 export type User = typeof schema.users.$inferSelect;
 export type NewUser = typeof schema.users.$inferInsert;

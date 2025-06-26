@@ -9,9 +9,9 @@ import IntentPreview from './IntentPreview';
 import { getProfile, gainXp } from '../../lib/ailock/api';
 import type { FullAilockProfile } from '../../lib/ailock/core';
 import LevelUpModal from '../Ailock/LevelUpModal';
-import { useConversation } from '@elevenlabs/react';
 import { searchIntents } from '../../lib/api';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
+import VoiceAgentClientWrapper from '../VoiceAgentClientWrapper';
 
 interface Message {
   id: string;
@@ -77,122 +77,14 @@ export default function ChatInterface() {
   const [ailockStatus, setAilockStatus] = useState<'unknown' | 'available' | 'unavailable'>('unknown');
   const [demoUsersSeeded, setDemoUsersSeeded] = useState(false);
   const [ailockProfile, setAilockProfile] = useState<FullAilockProfile | null>(null);
+  const [ailockId, setAilockId] = useState<string | null>(null);
   const [levelUpInfo, setLevelUpInfo] = useState<{ newLevel: number, skillPointsGained: number, xpGained: number } | null>(null);
   const [isLevelUpModalOpen, setIsLevelUpModalOpen] = useState(false);
   const [newLevelInfo, setNewLevelInfo] = useState({ level: 0, xp: 0, skillPoints: 0 });
   const [showChatHistoryMessage, setShowChatHistoryMessage] = useState(false);
   
   // Voice Agent Integration
-  const [isVoiceVisible, setIsVoiceVisible] = useState(true);
-  
-  // ElevenLabs Voice Agent
-  const getSignedUrl = async (): Promise<string> => {
-    const response = await fetch('/.netlify/functions/get-elevenlabs-signed-url');
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to get signed URL');
-    }
-    const { signedUrl } = await response.json();
-    return signedUrl;
-  };
-
-  const conversation = useConversation({
-    onConnect: () => {
-      console.log('✅ Voice agent connected');
-      toast.success('🎤 Айлок Онлайн!');
-    },
-    onDisconnect: () => {
-      console.log('❌ Voice agent disconnected');
-      toast('🔴 Айлок Отключен!');
-    },
-    onMessage: (message: any) => {
-      console.log('📨 Dispatching voice message to main chat:', message);
-      window.dispatchEvent(new CustomEvent('add-message-to-chat', { detail: message }));
-      if (message.source === 'user' && ailockProfile?.id) {
-        gainXp(ailockProfile.id, 'voice_message_sent')
-          .then(result => {
-            if (result.success) {
-              toast.success(`+${result.xpGained} XP (голос)`, { duration: 1500, icon: '🎙️' });
-              window.dispatchEvent(new CustomEvent('ailock-profile-updated'));
-            }
-          })
-          .catch(err => console.warn("Failed to gain XP for voice message", err));
-      }
-    },
-    onError: (error: any) => {
-      console.error('💥 Voice agent error:', error);
-      const errorMessage = error ? String(error) : 'Unknown error';
-      toast.error('❌ Ошибка: ' + errorMessage);
-    },
-    clientTools: {
-      search_intents: async ({ query }: any) => {
-        console.log(`[Tool] 'search_intents' called with query: "${query}"`);
-
-        if (typeof query !== 'string' || !query.trim()) {
-          console.warn('[Tool] search_intents called with an invalid query.');
-          return "Please provide a valid search query to find intents.";
-        }
-
-        try {
-          const results = await searchIntents(query);
-          console.log(`[Tool] Found ${results.length} results.`);
-          
-          // Отправляем результаты в боковую панель (аналогично текстовому чату)
-          window.dispatchEvent(new CustomEvent('voice-search-results', { detail: { query, results } }));
-          
-          // Отправляем интенты в чат через тот же механизм, что и текстовый чат
-          window.dispatchEvent(new CustomEvent('voice-intents-found', { 
-            detail: { 
-              intents: results.slice(0, 3),
-              query: query,
-              source: 'voice'
-            } 
-          }));
-
-          if (!results || results.length === 0) {
-            return `Я не смог найти интенты по запросу "${query}". Попробуйте другой поиск или создайте новый интент.`;
-          }
-          
-          return `Найдено ${results.length} интентов для "${query}". Я отобразил лучшие результаты на экране.`;
-        } catch (toolError) {
-          console.error('[Tool] The "search_intents" tool failed:', toolError);
-          return JSON.stringify({ tool: 'search_intents', error: 'Search failed' });
-        }
-      },
-    }
-  });
-
-  const handleToggleVoiceConversation = useCallback(async () => {
-    const currentStatus = String(conversation.status);
-    if (currentStatus === 'connected') {
-      console.log('⏹️ Stopping conversation...');
-      await conversation.endSession();
-    } else if (currentStatus === 'disconnected' || currentStatus === 'error') {
-      console.log('🎤 Attempting to start conversation...');
-      window.dispatchEvent(new CustomEvent('voice-session-started'));
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        const signedUrl = await getSignedUrl();
-        console.log('✅ Got signed URL.');
-        await conversation.startSession({ signedUrl });
-      } catch (err) {
-        console.error('💥 Failed to start conversation:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        toast.error(`Не удалось запустить: ${errorMessage}`);
-      }
-    }
-  }, [conversation]);
-
-  // Check if voice is available for user plan
-  useEffect(() => {
-    const userPlan = localStorage.getItem('userPlan') || 'free';
-    if (userPlan === 'free') {
-      setIsVoiceVisible(false);
-      console.log('❌ Voice agent hidden - free plan');
-    } else {
-      console.log('✅ Voice agent visible - plan:', userPlan);
-    }
-  }, []);
+  // Voice agent will be rendered as separate client component
   
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomOfMessagesRef = useRef<HTMLDivElement>(null);
@@ -365,7 +257,12 @@ export default function ChatInterface() {
     if (currentUser && currentUser.id !== 'loading') {
       console.log('Current user is valid, fetching profile:', currentUser.name);
       getProfile(currentUser.id)
-        .then(setAilockProfile)
+        .then(profile => {
+          setAilockProfile(profile);
+          if (profile) {
+            setAilockId(profile.id);
+          }
+        })
         .catch((err: any) => {
           console.error("Failed to load Ailock profile", err);
           toast.error("Could not load Ailock profile.");
@@ -392,6 +289,9 @@ export default function ChatInterface() {
     setIsStreaming(true);
     setError(null);
     setSuggestedActions([]);
+
+    // Immediately grant XP for the text message (mirrors voice behaviour)
+    handleXpGain();
 
     try {
       await sendAilockMessage(userMessage);
@@ -449,7 +349,6 @@ export default function ChatInterface() {
                 setAilockStatus('available');
                 setError(null);
                 console.log('✅ Message conversation saved to database');
-                handleXpGain();
                 resolve();
                 return;
               }
@@ -467,7 +366,6 @@ export default function ChatInterface() {
                     setAilockStatus('available');
                     setError(null);
                     console.log('✅ Message conversation saved to database');
-                    handleXpGain();
                     resolve();
                     return;
                   }
@@ -560,6 +458,9 @@ export default function ChatInterface() {
     setError('Ailock services unavailable - using offline responses.');
     setIsStreaming(false);
     setStreamingMessageId(null);
+
+    // Grant XP even when using fallback (offline) response
+    handleXpGain();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -642,88 +543,13 @@ export default function ChatInterface() {
 
   // Voice Ailock Component with real ElevenLabs integration
   const VoiceAilock = () => {
-    if (!isVoiceVisible) {
-      return (
-        <div className="relative">
-          <img src="/images/ailock-character.png" 
-               className="w-24 h-24 object-contain transition-all duration-300 hover:scale-105"
-               alt="Ailock" 
-               style={{aspectRatio: '1/1', border: 'none', outline: 'none'}} />
-        </div>
-      );
-    }
-
-    const getAvatarBorderColor = () => {
-      switch (String(conversation.status)) {
-        case 'connecting':
-        case 'disconnecting':
-          return 'border-yellow-500 bg-yellow-500/10';
-        case 'connected':
-          return 'border-green-500 bg-green-500/10';
-        case 'error':
-        default:
-          return 'border-blue-500 bg-blue-500/10';
-      }
-    };
-
-    const getStatusText = () => {
-      switch (String(conversation.status)) {
-        case 'connecting':
-          return '🔄 Соединяюсь...';
-        case 'connected':
-          return '🎤 Говорите с Айлоком';
-        case 'disconnecting':
-          return '⏹️ Отключаюсь...';
-        case 'error':
-          return '❌ Ошибка подключения';
-        default:
-          return '🎙️ Нажмите для голосового чата';
-      }
-    };
-
-    const isDisabled = conversation.status === 'connecting' || conversation.status === 'disconnecting';
-
+    // Voice agent will be rendered as separate client component in VoiceAgentWidget
     return (
-      <div className="relative cursor-pointer" onClick={isDisabled ? undefined : handleToggleVoiceConversation}>
-        {/* Animated border around avatar */}
-        <div className={`
-          absolute inset-0 rounded-lg transition-all duration-300
-          border-2 ${getAvatarBorderColor()}
-          ${conversation.status === 'connecting' ? 'animate-pulse' : ''}
-          ${conversation.status === 'connected' ? 'animate-pulse' : ''}
-        `} style={{
-          width: '104px', // 24*4 + 8px padding
-          height: '104px',
-          left: '-4px',
-          top: '-4px'
-        }} />
-        
-        {/* Sound waves animation when connected */}
-        {conversation.status === 'connected' && (
-          <>
-            <div className="absolute w-32 h-32 border-2 border-green-400/40 rounded-full voice-listening-wave-1" 
-                 style={{animationDuration: '1s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-            <div className="absolute w-40 h-40 border border-green-300/30 rounded-full voice-listening-wave-2" 
-                 style={{animationDuration: '1.5s', animationDelay: '0.2s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-            <div className="absolute w-48 h-48 border border-green-200/20 rounded-full voice-listening-wave-3" 
-                 style={{animationDuration: '2s', animationDelay: '0.4s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-          </>
-        )}
-        
-        {/* Ailock character */}
+      <div className="relative">
         <img src="/images/ailock-character.png" 
-             className={`w-24 h-24 object-contain z-10 transition-all duration-300 ${
-               conversation.status === 'connected' ? 'scale-110 drop-shadow-2xl' : 'hover:scale-105'
-             } ${isDisabled ? 'opacity-70' : ''}`}
+             className="w-24 h-24 object-contain transition-all duration-300 hover:scale-105"
              alt="Ailock" 
              style={{aspectRatio: '1/1', border: 'none', outline: 'none'}} />
-        
-        {/* Voice state indicator */}
-        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-center">
-          <span className="bg-slate-700 text-white text-xs px-3 py-1 rounded-full">
-            {getStatusText()}
-          </span>
-        </div>
       </div>
     );
   };
@@ -832,14 +658,13 @@ export default function ChatInterface() {
   }, [isPersistentSession]);
 
   const handleXpGain = async () => {
-    const profile = ailockProfile;
-    if (!profile || !profile.id) {
-      console.error("Cannot gain XP: Ailock profile or ID is missing.", { profile });
+    if (!ailockId) {
+      console.error("Cannot gain XP: Ailock ID is missing.", { ailockId, currentUser: currentUser.id });
       return;
     }
 
     try {
-        const result = await gainXp(profile.id, 'chat_message_sent');
+        const result = await gainXp(ailockId, 'chat_message_sent');
         if (result.success) {
             toast.success(`+${result.xpGained} XP`, { duration: 1500, icon: '✨' });
             
@@ -1150,18 +975,6 @@ export default function ChatInterface() {
         </div>
       </div>
 
-      <Toaster
-        position="bottom-center"
-        toastOptions={{
-          className: '',
-          style: {
-            border: '1px solid #7132f5',
-            padding: '16px',
-            color: '#e5e7eb',
-            background: '#1f2937'
-          },
-        }}
-      />
       {levelUpInfo && (
         <LevelUpModal
           isOpen={!!levelUpInfo}
@@ -1171,6 +984,9 @@ export default function ChatInterface() {
           xpGained={levelUpInfo.xpGained}
         />
       )}
+      
+      {/* Voice Agent Widget - Client Only */}
+      <VoiceAgentClientWrapper />
     </div>
   );
 }

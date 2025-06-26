@@ -7,7 +7,7 @@ import { searchIntents, createIntent, getAilockProfile, gainAilockXp } from '../
 import { getProfile, gainXp } from '../lib/ailock/api';
 import { useUserSession } from '../hooks/useUserSession';
 import toast from 'react-hot-toast';
-import { cn } from '@/lib/utils';
+import { cn } from '../lib/utils';
 
 const AGENT_ID = import.meta.env.PUBLIC_AGENT_ID || import.meta.env.AGENT_ID;
 
@@ -23,8 +23,14 @@ const getSignedUrl = async (): Promise<string> => {
 
 export default function VoiceAgentWidget() {
   const [isVisible, setIsVisible] = useState(true);
+  const [isClient, setIsClient] = useState(false);
   const { currentUser } = useUserSession();
   const [ailockId, setAilockId] = useState<string | null>(null);
+
+  // Убедимся, что мы на клиенте
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     if (currentUser && currentUser.id !== 'loading') {
@@ -135,7 +141,8 @@ export default function VoiceAgentWidget() {
     }
   }, []);
 
-  if (!isVisible) return null;
+  // Не рендерим на сервере или если не видим
+  if (!isClient || !isVisible) return null;
 
   const getButtonAppearance = (currentStatus: typeof conversation.status): string => {
     switch (String(currentStatus)) {
