@@ -32,6 +32,7 @@
     "@astrojs/netlify": "^6.3.4",
     "@astrojs/react": "^4.3.0",
     "@astrojs/tailwind": "^6.0.2",
+    "@elevenlabs/react": "^0.1.7",
     "@nanostores/react": "^1.0.0",
     "@neondatabase/serverless": "^1.0.1",
     "@netlify/blobs": "^10.0.0",

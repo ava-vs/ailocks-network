@@ -22,6 +22,14 @@ To enable live AI functionality on Netlify, you need to set these environment va
 - Value: `sk-or-your-openrouter-api-key-here`
 - Description: OpenRouter API key as fallback
 
+**ELEVENLABS_API_KEY**
+- Value: `your-elevenlabs-api-key-here`
+- Description: ElevenLabs API key for voice agent functionality
+
+**PUBLIC_AGENT_ID**
+- Value: `your-actual-agent-id-here`
+- Description: ElevenLabs Agent ID for voice agent configuration
+
 ### 3. Additional Required Variables
 
 **JWT_SECRET**
