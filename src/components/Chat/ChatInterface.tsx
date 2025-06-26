@@ -938,42 +938,44 @@ export default function ChatInterface() {
         )}
       </div>
 
-      {/* Input Area */}
-      <div className="px-6 pb-4 pt-2 bg-gradient-to-t from-slate-800/90 via-slate-800/90 to-transparent">
-        <div className="relative max-w-4xl mx-auto">
-          <div className="relative">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={getPlaceholder()}
-              rows={1}
-              className="w-full pl-6 pr-40 py-4 bg-slate-800/60 border border-blue-500/30 
-                        rounded-xl backdrop-blur text-white placeholder-gray-400
-                        focus:outline-none focus:border-blue-500 focus:bg-slate-800/80 resize-none transition-all duration-300"
-              style={{ minHeight: '56px' }}
-              disabled={isStreaming || !sessionId}
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-              <button 
-                className="p-3 hover:bg-slate-700/50 rounded-lg transition-colors"
-                title="Attach file"
-              >
-                <Paperclip className="w-5 h-5 text-gray-400" />
-              </button>
-              <button 
-                onClick={sendMessage}
-                disabled={!input.trim() || isStreaming || !sessionId}
-                className="p-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Send message"
-              >
-                <Send className="w-5 h-5 text-white" />
-              </button>
+      {/* Input Area - отображается только после первого сообщения */}
+      {messages.length > 0 && (
+        <div className="px-6 pb-4 pt-2 bg-gradient-to-t from-slate-800/90 via-slate-800/90 to-transparent">
+          <div className="relative max-w-5xl mx-auto">
+            <div className="chat-input-container relative">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={getPlaceholder()}
+                className="chat-textarea w-full px-6 py-6 pr-36 bg-slate-800/60 border border-blue-500/30 
+                          rounded-2xl backdrop-blur text-white placeholder-gray-400 text-lg
+                          focus:outline-none focus:border-blue-500 focus:bg-slate-800/80 resize-none transition-all duration-300"
+                disabled={isStreaming || !sessionId}
+              />
+
+              {/* INPUT ACTIONS */}
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
+                <button 
+                  className="p-3 hover:bg-slate-700/50 rounded-lg transition-colors"
+                  title="Attach file"
+                >
+                  <Paperclip className="w-6 h-6 text-gray-400" />
+                </button>
+                <button 
+                  onClick={sendMessage}
+                  disabled={!input.trim() || isStreaming || !sessionId}
+                  className="p-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Send message"
+                >
+                  <Send className="w-6 h-6 text-white" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {levelUpInfo && (
         <LevelUpModal
