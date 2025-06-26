@@ -590,27 +590,6 @@ export default function ChatInterface() {
     </div>
   );
 
-  // CRITICAL FIX 5: Floating Voice Button (Alternative)
-  const FloatingVoiceButton = () => (
-    <button 
-      onClick={handleVoiceClick}
-      className={`fixed bottom-24 right-8 w-16 h-16 rounded-full shadow-2xl z-50 
-                flex items-center justify-center transition-all duration-300 ${
-        voiceState === 'listening' 
-          ? 'bg-red-500 animate-pulse scale-110' 
-          : 'bg-blue-500 hover:bg-blue-600 hover:scale-105'
-      }`}
-    >
-      {/* Microphone Icon */}
-      <Mic className="w-8 h-8 text-white" />
-      
-      {/* Pulse animation when listening */}
-      {voiceState === 'listening' && (
-        <div className="absolute inset-0 rounded-full border-4 border-red-300/50 animate-ping"></div>
-      )}
-    </button>
-  );
-
   const getModeDescription = (mode: string) => {
     const descriptions: Record<string, Record<string, string>> = {
       en: {
@@ -757,7 +736,7 @@ export default function ChatInterface() {
   };
 
   useEffect(() => {
-    // Обработчик для текстовых сообщений от голоса
+    // Handler for text messages from voice
     const handleVoiceMessage = (event: CustomEvent) => {
       const { source, message } = event.detail;
       const role = source === 'user' ? 'user' : 'assistant';
@@ -771,7 +750,7 @@ export default function ChatInterface() {
       setMessages(prev => [...prev, newMessage]);
     };
 
-    // Обработчик для интентов от голосового агента
+    // Handler for voice intents - keep our voice agent functionality
     const handleVoiceIntents = (event: CustomEvent) => {
       const { intents, query, source } = event.detail;
       
@@ -791,7 +770,7 @@ export default function ChatInterface() {
       }
     };
 
-    // Обработчик старта сессии
+    // Handler for session start
     const handleVoiceSessionStart = () => {
       console.log('Voice session started, notified main chat.');
     };
@@ -805,7 +784,7 @@ export default function ChatInterface() {
       window.removeEventListener('voice-intents-found', handleVoiceIntents as EventListener);
       window.removeEventListener('voice-session-started', handleVoiceSessionStart as EventListener);
     };
-  }, []); // Пустой массив зависимостей, чтобы это выполнилось один раз
+  }, []); // Empty dependency array to run once
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-slate-900/95 to-slate-800/95 backdrop-blur-xl">
@@ -1076,9 +1055,6 @@ export default function ChatInterface() {
           xpGained={levelUpInfo.xpGained}
         />
       )}
-
-      {/* CRITICAL FIX 5: Floating Voice Button (Alternative) */}
-      <FloatingVoiceButton />
     </div>
   );
 }

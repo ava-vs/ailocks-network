@@ -39,7 +39,6 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
   const [dataSource, setDataSource] = useState<'mock' | 'real'>('mock');
   const [intentsExpanded, setIntentsExpanded] = useState(true);
   const [newNotifications, setNewNotifications] = useState(3);
-  const [isRightPanelExpanded] = useState(false);
   const [intents, setIntents] = useState<Intent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -326,7 +325,12 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
 
           {/* Second icon - Intents with NEW badge */}
           <button 
-            onClick={handleSectionToggle}
+            onClick={() => {
+              if (setIsRightPanelExpanded) {
+                setIsRightPanelExpanded(true);
+                setActiveSection('intents');
+              }
+            }}
             className="relative w-12 h-12 flex items-center justify-center rounded-lg hover:bg-slate-700/50 transition-colors cursor-pointer"
           >
             {/* Intents icon with gradient */}
