@@ -79,6 +79,7 @@ export default function ChatInterface() {
   const [levelUpInfo, setLevelUpInfo] = useState<{ newLevel: number, skillPointsGained: number, xpGained: number } | null>(null);
   const [isLevelUpModalOpen, setIsLevelUpModalOpen] = useState(false);
   const [newLevelInfo, setNewLevelInfo] = useState({ level: 0, xp: 0, skillPoints: 0 });
+  const [showChatHistoryMessage, setShowChatHistoryMessage] = useState(false);
   
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomOfMessagesRef = useRef<HTMLDivElement>(null);
@@ -612,6 +613,18 @@ export default function ChatInterface() {
 
   const isPersistentSession = sessionId && !sessionId.startsWith('local-') && !sessionId.startsWith('fallback-');
 
+  // Show chat history message for 3 seconds when session becomes persistent
+  useEffect(() => {
+    if (isPersistentSession && !showChatHistoryMessage) {
+      setShowChatHistoryMessage(true);
+      const timer = setTimeout(() => {
+        setShowChatHistoryMessage(false);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isPersistentSession, showChatHistoryMessage]);
+
   const handleXpGain = async () => {
     if (!ailockProfile) return;
 
@@ -728,7 +741,7 @@ export default function ChatInterface() {
                 </p>
                 
                 {/* CHAT INPUT - CLEAN DESIGN */}
-                <div className="relative max-w-3xl">
+                <div className="relative max-w-5xl">
                   <textarea
                     ref={inputRef}
                     value={input}
@@ -773,8 +786,8 @@ export default function ChatInterface() {
                 </div>
                 
                 {/* Chat History Status */}
-                {isPersistentSession && (
-                  <div className="mt-6 p-4 bg-emerald-500/20 border border-emerald-500/30 rounded-xl">
+                {showChatHistoryMessage && (
+                  <div className="mt-6 p-4 bg-emerald-500/20 border border-emerald-500/30 rounded-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="flex items-center space-x-2 text-emerald-400 mb-2">
                       <span className="font-medium">💾 Chat History Enabled</span>
                     </div>
@@ -894,32 +907,6 @@ export default function ChatInterface() {
             <div ref={bottomOfMessagesRef} />
           </div>
         )}
-      </div>
-
-      {/* Bottom Status Bar */}
-      <div className="fixed bottom-0 left-0 right-0 w-full h-12 bg-slate-900/95 backdrop-blur border-t border-gray-700 flex items-center justify-between px-6 z-40">
-        {/* LEFT STATUS */}
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
-            <span className="text-xs text-gray-400">Multi-Modal AI Active</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-            <span className="text-xs text-gray-400">Secure Connection</span>
-          </div>
-        </div>
-        
-        {/* RIGHT STATUS */}
-        <div className="flex items-center gap-6">
-          <span className="text-xs text-gray-400">Ailocks v8.0 • Ai2Ai Network</span>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-            <span className="text-xs text-gray-400 px-2 py-1 border border-gray-600 rounded-lg">
-              Built on Bolt
-            </span>
-          </div>
-        </div>
       </div>
 
       <Toaster

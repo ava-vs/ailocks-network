@@ -118,7 +118,7 @@ export default function VoiceAgentWidget() {
 
   return (
     <>
-      <div className="fixed bottom-8 right-8 z-50 flex flex-col items-center gap-2">
+      <div className="fixed bottom-20 right-8 z-40 flex flex-col items-center gap-2">
         <button
           onClick={handleToggleConversation}
           disabled={isDisabled}
