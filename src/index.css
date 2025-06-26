@@ -145,115 +145,6 @@
   .notification-pulse {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
-
-  /* CRITICAL FIX 1: Bottom Status Bar - Full Screen Layout */
-  .status-bar {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100vw !important;
-    height: 48px !important;
-    background: rgba(15, 23, 42, 0.95) !important;
-    backdrop-filter: blur(20px) !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-    z-index: 1000 !important;
-    margin: 0 !important;
-    padding: 0 16px !important;
-  }
-
-  /* Ensure main content extends to bottom */
-  .main-content {
-    min-height: calc(100vh - 60px) !important; /* Header height */
-    padding-bottom: 48px !important; /* Status bar height */
-  }
-
-  /* Remove floating behavior, make it stick to bottom */
-  .bottom-panel {
-    position: fixed !important;
-    bottom: 0 !important;
-    width: 100% !important;
-    margin: 0 !important;
-  }
-
-  /* CRITICAL FIX 2: Ailock Widget - Remove Image Border */
-  .ailock-widget img,
-  .ailock-avatar img,
-  .ailock-character img {
-    border: none !important;
-    outline: none !important;
-    box-shadow: none !important;
-  }
-
-  /* CRITICAL FIX 3: Menu Icons - Light Gradients */
-  .sidebar-icon {
-    background: linear-gradient(135deg, #E4F0FE 0%, #2A8ED7 100%) !important;
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    background-clip: text !important;
-    font-size: 20px !important;
-    transition: all 0.3s ease !important;
-  }
-
-  .sidebar-icon:hover {
-    background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%) !important;
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    transform: scale(1.1) !important;
-  }
-
-  .right-sidebar-icon {
-    background: linear-gradient(135deg, #E4F0FE 0%, #2A8ED7 100%) !important;
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    background-clip: text !important;
-  }
-
-  /* CRITICAL FIX 4: Chat Input - 150px Height */
-  .chat-input-container {
-    height: 150px !important;
-    min-height: 150px !important;
-    padding: 16px !important;
-    display: flex !important;
-    align-items: center !important;
-    gap: 12px !important;
-  }
-
-  .chat-textarea {
-    flex: 1 !important;
-    height: 120px !important;
-    min-height: 120px !important;
-    resize: none !important;
-    background: transparent !important;
-    border: none !important;
-    outline: none !important;
-    color: white !important;
-    font-size: 16px !important;
-    line-height: 1.5 !important;
-  }
-
-  /* CRITICAL FIX 5: Voice Activation Animations */
-  .voice-listening-wave-1 {
-    animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-  }
-
-  .voice-listening-wave-2 {
-    animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-    animation-delay: 0.2s;
-  }
-
-  .voice-listening-wave-3 {
-    animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-    animation-delay: 0.4s;
-  }
-
-  .voice-processing {
-    animation: spin 1s linear infinite;
-  }
-
-  .voice-speaking {
-    animation: bounce 1s infinite;
-  }
 }
 
 @keyframes slideInUp {
@@ -412,4 +303,138 @@ button, input, [role="button"] {
   .text-hierarchy-2 {
     font-size: 1.5rem;
   }
+}
+
+/* CRITICAL FIX 1: Bottom Status Bar - Full Screen Layout */
+.status-bar {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100vw !important;
+  height: 48px !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  backdrop-filter: blur(20px) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+  z-index: 1000 !important;
+  margin: 0 !important;
+  padding: 0 16px !important;
+}
+
+/* Ensure main content extends to bottom */
+.main-content {
+  min-height: calc(100vh - 60px) !important; /* Header height */
+  padding-bottom: 48px !important; /* Status bar height */
+}
+
+/* Remove floating behavior, make it stick to bottom */
+.bottom-panel {
+  position: fixed !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+/* CRITICAL FIX 2: Ailock Widget - Remove Image Border */
+.ailock-widget img,
+.ailock-avatar img,
+.ailock-character img {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* CRITICAL FIX 3: Menu Icons - Light Gradients */
+.sidebar-icon {
+  background: linear-gradient(135deg, #E4F0FE 0%, #2A8ED7 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  font-size: 20px !important;
+  transition: all 0.3s ease !important;
+}
+
+.sidebar-icon:hover {
+  background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  transform: scale(1.1) !important;
+}
+
+.right-sidebar-icon {
+  background: linear-gradient(135deg, #E4F0FE 0%, #2A8ED7 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* CRITICAL FIX 4: Chat Input - 150px Height */
+.chat-input-container {
+  height: 150px !important;
+  min-height: 150px !important;
+  padding: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  background: rgba(51, 65, 85, 0.6) !important;
+  border: 1px solid rgba(74, 158, 255, 0.3) !important;
+  border-radius: 16px !important;
+  backdrop-filter: blur(10px) !important;
+  transition: border-color 0.3s ease !important;
+}
+
+.chat-input-container:focus-within {
+  border-color: rgba(74, 158, 255, 0.6) !important;
+  box-shadow: 0 0 0 1px rgba(74, 158, 255, 0.2) !important;
+}
+
+.chat-textarea {
+  flex: 1 !important;
+  height: 120px !important;
+  min-height: 120px !important;
+  resize: none !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  color: white !important;
+  font-size: 16px !important;
+  line-height: 1.5 !important;
+  padding: 12px !important;
+}
+
+.chat-textarea::placeholder {
+  color: rgba(156, 163, 175, 0.8) !important;
+}
+
+/* CRITICAL FIX 5: Voice Activation Animations */
+.voice-listening-wave-1 {
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.voice-listening-wave-2 {
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+  animation-delay: 0.2s;
+}
+
+.voice-listening-wave-3 {
+  animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  animation-delay: 0.4s;
+}
+
+.voice-processing {
+  animation: spin 1s linear infinite;
+}
+
+.voice-speaking {
+  animation: bounce 1s infinite;
+}
+
+/* CRITICAL FIX: Hide collapsed intents window at bottom */
+.collapsed-intents-bottom {
+  display: none !important;
+}
+
+/* Remove any bottom floating intents panel */
+.intents-collapsed-panel {
+  display: none !important;
 }
