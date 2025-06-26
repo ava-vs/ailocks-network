@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Paperclip, Mic, Bot, MessageCircle, Copy, Plus, MapPin, TrendingUp, Users, CheckCircle, XCircle, Loader, ArrowRight, BrainCircuit, Search, DraftingCompass, Eye } from 'lucide-react';
 import { useStore } from '@nanostores/react';
 import { appState, setMode, setLanguage, type AIMode, type Language } from '../../lib/store';
@@ -9,6 +9,8 @@ import IntentPreview from './IntentPreview';
 import { getProfile, gainXp } from '../../lib/ailock/api';
 import type { FullAilockProfile } from '../../lib/ailock/core';
 import LevelUpModal from '../Ailock/LevelUpModal';
+import { useConversation } from '@elevenlabs/react';
+import { searchIntents } from '../../lib/api';
 import toast, { Toaster } from 'react-hot-toast';
 
 interface Message {
@@ -63,7 +65,6 @@ export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('connecting');
@@ -81,8 +82,117 @@ export default function ChatInterface() {
   const [newLevelInfo, setNewLevelInfo] = useState({ level: 0, xp: 0, skillPoints: 0 });
   const [showChatHistoryMessage, setShowChatHistoryMessage] = useState(false);
   
-  // CRITICAL FIX 5: Voice Activation for Central Ailock
-  const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
+  // Voice Agent Integration
+  const [isVoiceVisible, setIsVoiceVisible] = useState(true);
+  
+  // ElevenLabs Voice Agent
+  const getSignedUrl = async (): Promise<string> => {
+    const response = await fetch('/.netlify/functions/get-elevenlabs-signed-url');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to get signed URL');
+    }
+    const { signedUrl } = await response.json();
+    return signedUrl;
+  };
+
+  const conversation = useConversation({
+    onConnect: () => {
+      console.log('✅ Voice agent connected');
+      toast.success('🎤 Айлок Онлайн!');
+    },
+    onDisconnect: () => {
+      console.log('❌ Voice agent disconnected');
+      toast('🔴 Айлок Отключен!');
+    },
+    onMessage: (message: any) => {
+      console.log('📨 Dispatching voice message to main chat:', message);
+      window.dispatchEvent(new CustomEvent('add-message-to-chat', { detail: message }));
+      if (message.source === 'user' && ailockProfile?.id) {
+        gainXp(ailockProfile.id, 'voice_message_sent')
+          .then(result => {
+            if (result.success) {
+              toast.success(`+${result.xpGained} XP (голос)`, { duration: 1500, icon: '🎙️' });
+              window.dispatchEvent(new CustomEvent('ailock-profile-updated'));
+            }
+          })
+          .catch(err => console.warn("Failed to gain XP for voice message", err));
+      }
+    },
+    onError: (error: any) => {
+      console.error('💥 Voice agent error:', error);
+      const errorMessage = error ? String(error) : 'Unknown error';
+      toast.error('❌ Ошибка: ' + errorMessage);
+    },
+    clientTools: {
+      search_intents: async ({ query }: any) => {
+        console.log(`[Tool] 'search_intents' called with query: "${query}"`);
+
+        if (typeof query !== 'string' || !query.trim()) {
+          console.warn('[Tool] search_intents called with an invalid query.');
+          return "Please provide a valid search query to find intents.";
+        }
+
+        try {
+          const results = await searchIntents(query);
+          console.log(`[Tool] Found ${results.length} results.`);
+          
+          // Отправляем результаты в боковую панель (аналогично текстовому чату)
+          window.dispatchEvent(new CustomEvent('voice-search-results', { detail: { query, results } }));
+          
+          // Отправляем интенты в чат через тот же механизм, что и текстовый чат
+          window.dispatchEvent(new CustomEvent('voice-intents-found', { 
+            detail: { 
+              intents: results.slice(0, 3),
+              query: query,
+              source: 'voice'
+            } 
+          }));
+
+          if (!results || results.length === 0) {
+            return `Я не смог найти интенты по запросу "${query}". Попробуйте другой поиск или создайте новый интент.`;
+          }
+          
+          return `Найдено ${results.length} интентов для "${query}". Я отобразил лучшие результаты на экране.`;
+        } catch (toolError) {
+          console.error('[Tool] The "search_intents" tool failed:', toolError);
+          return JSON.stringify({ tool: 'search_intents', error: 'Search failed' });
+        }
+      },
+    }
+  });
+
+  const handleToggleVoiceConversation = useCallback(async () => {
+    const currentStatus = String(conversation.status);
+    if (currentStatus === 'connected') {
+      console.log('⏹️ Stopping conversation...');
+      await conversation.endSession();
+    } else if (currentStatus === 'disconnected' || currentStatus === 'error') {
+      console.log('🎤 Attempting to start conversation...');
+      window.dispatchEvent(new CustomEvent('voice-session-started'));
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        const signedUrl = await getSignedUrl();
+        console.log('✅ Got signed URL.');
+        await conversation.startSession({ signedUrl });
+      } catch (err) {
+        console.error('💥 Failed to start conversation:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        toast.error(`Не удалось запустить: ${errorMessage}`);
+      }
+    }
+  }, [conversation]);
+
+  // Check if voice is available for user plan
+  useEffect(() => {
+    const userPlan = localStorage.getItem('userPlan') || 'free';
+    if (userPlan === 'free') {
+      setIsVoiceVisible(false);
+      console.log('❌ Voice agent hidden - free plan');
+    } else {
+      console.log('✅ Voice agent visible - plan:', userPlan);
+    }
+  }, []);
   
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomOfMessagesRef = useRef<HTMLDivElement>(null);
@@ -530,65 +640,93 @@ export default function ChatInterface() {
     inputRef.current?.focus();
   };
 
-  // CRITICAL FIX 5: Voice Activation for Central Ailock
-  const handleVoiceClick = () => {
-    if (voiceState === 'idle') {
-      setVoiceState('listening');
-      setTimeout(() => {
-        setVoiceState('processing');
-        setTimeout(() => {
-          setVoiceState('speaking');
-          setTimeout(() => setVoiceState('idle'), 2000);
-        }, 1500);
-      }, 3000);
+  // Voice Ailock Component with real ElevenLabs integration
+  const VoiceAilock = () => {
+    if (!isVoiceVisible) {
+      return (
+        <div className="relative">
+          <img src="/images/ailock-character.png" 
+               className="w-24 h-24 object-contain transition-all duration-300 hover:scale-105"
+               alt="Ailock" 
+               style={{aspectRatio: '1/1', border: 'none', outline: 'none'}} />
+        </div>
+      );
     }
-  };
 
-  // Voice Ailock Component
-  const VoiceAilock = () => (
-    <div className="relative cursor-pointer" onClick={handleVoiceClick}>
-      {/* Sound waves animation when listening */}
-      {voiceState === 'listening' && (
-        <>
-          <div className="absolute w-32 h-32 border-2 border-red-400/40 rounded-full voice-listening-wave-1" 
-               style={{animationDuration: '1s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-          <div className="absolute w-40 h-40 border border-red-300/30 rounded-full voice-listening-wave-2" 
-               style={{animationDuration: '1.5s', animationDelay: '0.2s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-          <div className="absolute w-48 h-48 border border-red-200/20 rounded-full voice-listening-wave-3" 
-               style={{animationDuration: '2s', animationDelay: '0.4s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-          <div className="absolute w-36 h-36 bg-red-500/20 rounded-full blur-xl animate-pulse" style={{left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-        </>
-      )}
-      
-      {/* Processing animation */}
-      {voiceState === 'processing' && (
-        <div className="absolute w-32 h-32 border-2 border-yellow-400/40 rounded-full voice-processing" style={{left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-      )}
-      
-      {/* Speaking animation */}
-      {voiceState === 'speaking' && (
-        <div className="absolute w-32 h-32 border-2 border-green-400/40 rounded-full voice-speaking" style={{left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-      )}
-      
-      {/* Ailock character */}
-      <img src="/images/ailock-character.png" 
-           className={`w-24 h-24 object-contain z-10 transition-all duration-300 ${
-             voiceState !== 'idle' ? 'scale-110 drop-shadow-2xl' : 'hover:scale-105'
-           }`}
-           alt="Ailock" 
-           style={{aspectRatio: '1/1', border: 'none', outline: 'none'}} />
-      
-      {/* Voice state indicator */}
-      <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-center">
-        <span className="bg-slate-700 text-white text-xs px-3 py-1 rounded-full">
-          {voiceState === 'idle' && 'Click to speak'}
-          {voiceState === 'listening' && '🔴 Listening...'}
-          {voiceState === 'processing' && '⚡ Processing...'}
-          {voiceState === 'speaking' && '🗣️ Speaking...'}
-        </span>
+    const getAvatarBorderColor = () => {
+      switch (String(conversation.status)) {
+        case 'connecting':
+        case 'disconnecting':
+          return 'border-yellow-500 bg-yellow-500/10';
+        case 'connected':
+          return 'border-green-500 bg-green-500/10';
+        case 'error':
+        default:
+          return 'border-blue-500 bg-blue-500/10';
+      }
+    };
+
+    const getStatusText = () => {
+      switch (String(conversation.status)) {
+        case 'connecting':
+          return '🔄 Соединяюсь...';
+        case 'connected':
+          return '🎤 Говорите с Айлоком';
+        case 'disconnecting':
+          return '⏹️ Отключаюсь...';
+        case 'error':
+          return '❌ Ошибка подключения';
+        default:
+          return '🎙️ Нажмите для голосового чата';
+      }
+    };
+
+    const isDisabled = conversation.status === 'connecting' || conversation.status === 'disconnecting';
+
+    return (
+      <div className="relative cursor-pointer" onClick={isDisabled ? undefined : handleToggleVoiceConversation}>
+        {/* Animated border around avatar */}
+        <div className={`
+          absolute inset-0 rounded-lg transition-all duration-300
+          border-2 ${getAvatarBorderColor()}
+          ${conversation.status === 'connecting' ? 'animate-pulse' : ''}
+          ${conversation.status === 'connected' ? 'animate-pulse' : ''}
+        `} style={{
+          width: '104px', // 24*4 + 8px padding
+          height: '104px',
+          left: '-4px',
+          top: '-4px'
+        }} />
+        
+        {/* Sound waves animation when connected */}
+        {conversation.status === 'connected' && (
+          <>
+            <div className="absolute w-32 h-32 border-2 border-green-400/40 rounded-full voice-listening-wave-1" 
+                 style={{animationDuration: '1s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
+            <div className="absolute w-40 h-40 border border-green-300/30 rounded-full voice-listening-wave-2" 
+                 style={{animationDuration: '1.5s', animationDelay: '0.2s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
+            <div className="absolute w-48 h-48 border border-green-200/20 rounded-full voice-listening-wave-3" 
+                 style={{animationDuration: '2s', animationDelay: '0.4s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
+          </>
+        )}
+        
+        {/* Ailock character */}
+        <img src="/images/ailock-character.png" 
+             className={`w-24 h-24 object-contain z-10 transition-all duration-300 ${
+               conversation.status === 'connected' ? 'scale-110 drop-shadow-2xl' : 'hover:scale-105'
+             } ${isDisabled ? 'opacity-70' : ''}`}
+             alt="Ailock" 
+             style={{aspectRatio: '1/1', border: 'none', outline: 'none'}} />
+        
+        {/* Voice state indicator */}
+        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-center">
+          <span className="bg-slate-700 text-white text-xs px-3 py-1 rounded-full">
+            {getStatusText()}
+          </span>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const getModeDescription = (mode: string) => {
     const descriptions: Record<string, Record<string, string>> = {
@@ -840,17 +978,6 @@ export default function ChatInterface() {
                         <Paperclip className="w-6 h-6 text-gray-400" />
                       </button>
                       <button 
-                        onClick={() => setIsListening(!isListening)}
-                        className={`p-3 rounded-lg transition-colors ${
-                          isListening 
-                            ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
-                            : 'text-gray-400 hover:bg-slate-700/50'
-                        }`}
-                        title="Voice input"
-                      >
-                        <Mic className="w-6 h-6" />
-                      </button>
-                      <button 
                         onClick={sendMessage}
                         disabled={!input.trim() || isStreaming || !sessionId}
                         className="p-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1009,17 +1136,6 @@ export default function ChatInterface() {
                 title="Attach file"
               >
                 <Paperclip className="w-5 h-5 text-gray-400" />
-              </button>
-              <button 
-                onClick={() => setIsListening(!isListening)}
-                className={`p-3 rounded-lg transition-colors ${
-                  isListening 
-                    ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
-                    : 'text-gray-400 hover:bg-slate-700/50'
-                }`}
-                title="Voice input"
-              >
-                <Mic className="w-5 h-5" />
               </button>
               <button 
                 onClick={sendMessage}
