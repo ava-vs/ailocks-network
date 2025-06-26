@@ -80,9 +80,7 @@ export default function ChatInterface() {
   const [isLevelUpModalOpen, setIsLevelUpModalOpen] = useState(false);
   const [newLevelInfo, setNewLevelInfo] = useState({ level: 0, xp: 0, skillPoints: 0 });
   const [showChatHistoryMessage, setShowChatHistoryMessage] = useState(false);
-  
-  // CRITICAL FIX 5: Voice Activation for Central Ailock
-  const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
+  const [voiceState, setVoiceState] = useState('idle');
   
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomOfMessagesRef = useRef<HTMLDivElement>(null);
@@ -525,66 +523,6 @@ export default function ChatInterface() {
     inputRef.current?.focus();
   };
 
-  // CRITICAL FIX 5: Voice Activation for Central Ailock
-  const handleVoiceClick = () => {
-    if (voiceState === 'idle') {
-      setVoiceState('listening');
-      setTimeout(() => {
-        setVoiceState('processing');
-        setTimeout(() => {
-          setVoiceState('speaking');
-          setTimeout(() => setVoiceState('idle'), 2000);
-        }, 1500);
-      }, 3000);
-    }
-  };
-
-  // Voice Ailock Component
-  const VoiceAilock = () => (
-    <div className="relative cursor-pointer" onClick={handleVoiceClick}>
-      {/* Sound waves animation when listening */}
-      {voiceState === 'listening' && (
-        <>
-          <div className="absolute w-32 h-32 border-2 border-red-400/40 rounded-full voice-listening-wave-1" 
-               style={{animationDuration: '1s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-          <div className="absolute w-40 h-40 border border-red-300/30 rounded-full voice-listening-wave-2" 
-               style={{animationDuration: '1.5s', animationDelay: '0.2s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-          <div className="absolute w-48 h-48 border border-red-200/20 rounded-full voice-listening-wave-3" 
-               style={{animationDuration: '2s', animationDelay: '0.4s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-          <div className="absolute w-36 h-36 bg-red-500/20 rounded-full blur-xl animate-pulse" style={{left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-        </>
-      )}
-      
-      {/* Processing animation */}
-      {voiceState === 'processing' && (
-        <div className="absolute w-32 h-32 border-2 border-yellow-400/40 rounded-full voice-processing" style={{left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-      )}
-      
-      {/* Speaking animation */}
-      {voiceState === 'speaking' && (
-        <div className="absolute w-32 h-32 border-2 border-green-400/40 rounded-full voice-speaking" style={{left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-      )}
-      
-      {/* Ailock character */}
-      <img src="/images/ailock-character.png" 
-           className={`w-24 h-24 object-contain z-10 transition-all duration-300 ${
-             voiceState !== 'idle' ? 'scale-110 drop-shadow-2xl' : 'hover:scale-105'
-           }`}
-           alt="Ailock" 
-           style={{aspectRatio: '1/1', border: 'none', outline: 'none'}} />
-      
-      {/* Voice state indicator */}
-      <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-center">
-        <span className="bg-slate-700 text-white text-xs px-3 py-1 rounded-full">
-          {voiceState === 'idle' && 'Click to speak'}
-          {voiceState === 'listening' && '🔴 Listening...'}
-          {voiceState === 'processing' && '⚡ Processing...'}
-          {voiceState === 'speaking' && '🗣️ Speaking...'}
-        </span>
-      </div>
-    </div>
-  );
-
   const getModeDescription = (mode: string) => {
     const descriptions: Record<string, Record<string, string>> = {
       en: {
@@ -726,6 +664,21 @@ export default function ChatInterface() {
     setInput('');
   };
 
+  const handleVoiceClick = () => {
+    if (voiceState === 'idle') {
+      setVoiceState('listening');
+      setTimeout(() => {
+        setVoiceState('processing');
+        setTimeout(() => {
+          setVoiceState('speaking');
+          setTimeout(() => setVoiceState('idle'), 2000);
+        }, 1500);
+      }, 3000);
+    } else {
+      setVoiceState('idle');
+    }
+  };
+
   useEffect(() => {
     // Handler for text messages from voice
     const handleVoiceMessage = (event: CustomEvent) => {
@@ -769,7 +722,7 @@ export default function ChatInterface() {
       window.removeEventListener('display-results-in-chat', handleIntentCards as EventListener);
       window.removeEventListener('voice-session-started', handleVoiceSessionStart as EventListener);
     };
-  }, []); // Empty dependency array to run once
+  }, []); 
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-b from-slate-900/95 to-slate-800/95 backdrop-blur-xl">
@@ -784,8 +737,50 @@ export default function ChatInterface() {
             <div className="max-w-5xl w-full flex items-center gap-10">
               {/* AILOCK CHARACTER ON LEFT */}
               <div className="flex-shrink-0">
-                {/* CRITICAL FIX 5: Voice Activation for Central Ailock */}
-                <VoiceAilock />
+                {/* Voice animations */}
+                <div className="relative">
+                  {voiceState === 'listening' && (
+                    <>
+                      <div className="absolute w-32 h-32 border-2 border-red-400/40 rounded-full animate-ping" 
+                          style={{animationDuration: '1s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
+                      <div className="absolute w-40 h-40 border border-red-300/30 rounded-full animate-ping" 
+                          style={{animationDuration: '1.5s', animationDelay: '0.2s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
+                    </>
+                  )}
+                  
+                  {voiceState === 'processing' && (
+                    <div className="absolute w-32 h-32 border-2 border-yellow-400/40 rounded-full animate-spin"
+                         style={{left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
+                  )}
+                  
+                  {voiceState === 'speaking' && (
+                    <div className="absolute w-32 h-32 border-2 border-green-400/40 rounded-full animate-pulse"
+                         style={{left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
+                  )}
+                  
+                  <img 
+                    src="/images/ailock-character.png" 
+                    alt="Ailock AI Assistant"
+                    className={`w-28 h-28 object-contain drop-shadow-2xl animate-float cursor-pointer z-10 ${
+                      voiceState !== 'idle' ? 'scale-110' : 'hover:scale-105'
+                    }`}
+                    style={{
+                      filter: 'drop-shadow(0 0 20px rgba(74, 158, 255, 0.3))',
+                      aspectRatio: '1/1'
+                    }}
+                    onClick={handleVoiceClick}
+                  />
+                  
+                  {/* Voice state text */}
+                  <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-center">
+                    <span className="text-xs text-gray-400">
+                      {voiceState === 'idle' && 'Click to speak'}
+                      {voiceState === 'listening' && '🔴 Listening...'}
+                      {voiceState === 'processing' && '⚡ Processing...'}
+                      {voiceState === 'speaking' && '🗣️ Speaking...'}
+                    </span>
+                  </div>
+                </div>
               </div>
               
               {/* TEXT CONTENT ON RIGHT */}
@@ -802,62 +797,60 @@ export default function ChatInterface() {
                 
                 {/* CHAT INPUT - CLEAN DESIGN */}
                 <div className="relative max-w-5xl">
-                  {/* CRITICAL FIX 4: Chat Input - 150px Height */}
-                  <div className="chat-input-container relative">
-                    <textarea
-                      ref={inputRef}
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder={getPlaceholder()}
-                      className="chat-textarea w-full px-6 py-6 pr-36 bg-slate-800/60 border border-blue-500/30 
-                                rounded-2xl backdrop-blur text-white placeholder-gray-400 text-lg
-                                focus:outline-none focus:border-blue-500 focus:bg-slate-800/80"
-                      disabled={isStreaming || !sessionId}
-                    />
-                    
-                    {/* INPUT ACTIONS */}
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
-                      <button 
-                        className="p-3 hover:bg-slate-700/50 rounded-lg transition-colors"
-                        title="Attach file"
-                      >
-                        <Paperclip className="w-6 h-6 text-gray-400" />
-                      </button>
-                      <button 
-                        onClick={() => setIsListening(!isListening)}
-                        className={`p-3 rounded-lg transition-colors ${
-                          isListening 
-                            ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
-                            : 'text-gray-400 hover:bg-slate-700/50'
-                        }`}
-                        title="Voice input"
-                      >
-                        <Mic className="w-6 h-6" />
-                      </button>
-                      <button 
-                        onClick={sendMessage}
-                        disabled={!input.trim() || isStreaming || !sessionId}
-                        className="p-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Send message"
-                      >
-                        <Send className="w-6 h-6 text-white" />
-                      </button>
-                    </div>
-                  </div>
+                  <textarea
+                    ref={inputRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder={getPlaceholder()}
+                    rows={1}
+                    className="chat-textarea w-full px-6 py-6 pr-36 bg-slate-800/60 border border-blue-500/30 
+                              rounded-2xl backdrop-blur text-white placeholder-gray-400 text-lg
+                              focus:outline-none focus:border-blue-500 focus:bg-slate-800/80 resize-none h-16"
+                    disabled={isStreaming || !sessionId}
+                  />
                   
-                  {/* Chat History Status */}
-                  {showChatHistoryMessage && (
-                    <div className="mt-6 p-4 bg-emerald-500/20 border border-emerald-500/30 rounded-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
-                      <div className="flex items-center space-x-2 text-emerald-400 mb-2">
-                        <span className="font-medium">💾 Chat History Enabled</span>
-                      </div>
-                      <p className="text-emerald-300 text-sm">
-                        Your conversations with Ailock are being saved and will persist across sessions.
-                      </p>
-                    </div>
-                  )}
+                  {/* INPUT ACTIONS */}
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
+                    <button 
+                      className="p-3 hover:bg-slate-700/50 rounded-lg transition-colors"
+                      title="Attach file"
+                    >
+                      <Paperclip className="w-6 h-6 text-gray-400" />
+                    </button>
+                    <button 
+                      onClick={() => setIsListening(!isListening)}
+                      className={`p-3 rounded-lg transition-colors ${
+                        isListening 
+                          ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                          : 'text-gray-400 hover:bg-slate-700/50'
+                      }`}
+                      title="Voice input"
+                    >
+                      <Mic className="w-6 h-6" />
+                    </button>
+                    <button 
+                      onClick={sendMessage}
+                      disabled={!input.trim() || isStreaming || !sessionId}
+                      className="p-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Send message"
+                    >
+                      <Send className="w-6 h-6 text-white" />
+                    </button>
+                  </div>
                 </div>
+                
+                {/* Chat History Status */}
+                {showChatHistoryMessage && (
+                  <div className="mt-6 p-4 bg-emerald-500/20 border border-emerald-500/30 rounded-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="flex items-center space-x-2 text-emerald-400 mb-2">
+                      <span className="font-medium">💾 Chat History Enabled</span>
+                    </div>
+                    <p className="text-emerald-300 text-sm">
+                      Your conversations with Ailock are being saved and will persist across sessions.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

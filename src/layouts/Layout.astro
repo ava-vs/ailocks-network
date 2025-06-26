@@ -48,7 +48,7 @@ const { title, description = "Advanced AI collaboration platform with geo-intell
       <CollapsibleNavigationSidebar client:load />
     </div>
 
-    <main class="fixed top-[60px] bottom-16 left-4 right-4 md:left-[60px] md:right-[60px] main-content">
+    <main class="fixed top-[60px] bottom-16 left-4 right-4 md:left-[60px] md:right-[60px]">
       <div class="h-full w-full rounded-2xl overflow-hidden">
         <slot />
       </div>
@@ -59,6 +59,8 @@ const { title, description = "Advanced AI collaboration platform with geo-intell
     </div>
 
     <!-- Status Bar - with proper spacing to avoid sidebar overlap -->
-    <StatusBar client:load />
+    <div class="fixed bottom-4 left-4 right-4 md:left-20 md:right-20">
+      <StatusBar client:load />
+    </div>
   </body>
 </html>
