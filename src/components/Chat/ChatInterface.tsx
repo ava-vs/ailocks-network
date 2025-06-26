@@ -81,6 +81,11 @@ export default function ChatInterface() {
   const [newLevelInfo, setNewLevelInfo] = useState({ level: 0, xp: 0, skillPoints: 0 });
   const [showChatHistoryMessage, setShowChatHistoryMessage] = useState(false);
   
+  const ailockProfileRef = useRef(ailockProfile);
+  useEffect(() => {
+    ailockProfileRef.current = ailockProfile;
+  }, [ailockProfile]);
+
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomOfMessagesRef = useRef<HTMLDivElement>(null);
 
@@ -363,14 +368,16 @@ export default function ChatInterface() {
                     const parsed = JSON.parse(data);
                     
                     if (parsed.type === 'chunk') {
-                      assistantMessage.content += parsed.content;
                       setMessages(prev => prev.map(msg => 
-                        msg.id === assistantMessage.id ? { ...assistantMessage } : msg
+                        msg.id === assistantMessage.id 
+                          ? { ...msg, content: msg.content + parsed.content } 
+                          : msg
                       ));
                     } else if (parsed.type === 'complete') {
-                      assistantMessage.content = parsed.fullResponse;
                       setMessages(prev => prev.map(msg => 
-                        msg.id === assistantMessage.id ? { ...assistantMessage } : msg
+                        msg.id === assistantMessage.id 
+                          ? { ...msg, content: parsed.fullResponse } 
+                          : msg
                       ));
                     } else if (parsed.type === 'intents') {
                       // Send all results to the side panel
@@ -383,16 +390,19 @@ export default function ChatInterface() {
                       
                       // Attach top 3 results to the message for rendering in chat
                       setMessages(prev => prev.map(msg => 
-                        msg.id === assistantMessage.id ? { ...assistantMessage, intents: parsed.intents.slice(0, 3) } : msg
+                        msg.id === assistantMessage.id 
+                          ? { ...msg, intents: parsed.intents.slice(0, 3) } 
+                          : msg
                       ));
                     } else if (parsed.type === 'actions') {
                       setSuggestedActions(parsed.actions);
                     } else if (parsed.type === 'error') {
                       setError(parsed.error);
                       if (parsed.fallback) {
-                        assistantMessage.content = parsed.fallback;
                         setMessages(prev => prev.map(msg => 
-                          msg.id === assistantMessage.id ? { ...assistantMessage } : msg
+                          msg.id === assistantMessage.id 
+                            ? { ...msg, content: parsed.fallback } 
+                            : msg
                         ));
                       }
                       setAilockStatus('unavailable');
@@ -626,10 +636,14 @@ export default function ChatInterface() {
   }, [isPersistentSession]);
 
   const handleXpGain = async () => {
-    if (!ailockProfile) return;
+    const profile = ailockProfileRef.current;
+    if (!profile || !profile.id) {
+      console.error("Cannot gain XP: Ailock profile or ID is missing.", { profile });
+      return;
+    }
 
     try {
-        const result = await gainXp(ailockProfile.id, 'chat_message_sent');
+        const result = await gainXp(profile.id, 'chat_message_sent');
         if (result.success) {
             toast.success(`+${result.xpGained} XP`, { duration: 1500, icon: '✨' });
             
@@ -678,18 +692,24 @@ export default function ChatInterface() {
       setMessages(prev => [...prev, newMessage]);
     };
 
-    // Обработчик для карточек интентов
-    const handleIntentCards = (event: CustomEvent) => {
-      const { intents } = event.detail;
-      const newCardsMessage: Message = { 
-        role: 'assistant', 
-        content: 'Вот что я нашел:',
-        intents: intents,
-        id: Date.now().toString(),
-        timestamp: new Date(),
-        mode: 'text',
-      };
-      setMessages(prev => [...prev, newCardsMessage]);
+    // Обработчик для интентов от голосового агента
+    const handleVoiceIntents = (event: CustomEvent) => {
+      const { intents, query, source } = event.detail;
+      
+      if (intents && intents.length > 0) {
+        const voiceResultsMessage: Message = { 
+          role: 'assistant', 
+          content: `🎤 Я нашел ${intents.length} возможностей по запросу "${query}":`,
+          intents: intents,
+          id: Date.now().toString(),
+          timestamp: new Date(),
+          mode: mode,
+        };
+        setMessages(prev => [...prev, voiceResultsMessage]);
+        
+        // Также отправляем уведомление о том, что результаты найдены голосовым агентом
+        console.log(`Voice agent found ${intents.length} intents for "${query}"`);
+      }
     };
 
     // Обработчик старта сессии
@@ -698,12 +718,12 @@ export default function ChatInterface() {
     };
 
     window.addEventListener('add-message-to-chat', handleVoiceMessage as EventListener);
-    window.addEventListener('display-results-in-chat', handleIntentCards as EventListener);
+    window.addEventListener('voice-intents-found', handleVoiceIntents as EventListener);
     window.addEventListener('voice-session-started', handleVoiceSessionStart as EventListener);
 
     return () => {
       window.removeEventListener('add-message-to-chat', handleVoiceMessage as EventListener);
-      window.removeEventListener('display-results-in-chat', handleIntentCards as EventListener);
+      window.removeEventListener('voice-intents-found', handleVoiceIntents as EventListener);
       window.removeEventListener('voice-session-started', handleVoiceSessionStart as EventListener);
     };
   }, []); // Пустой массив зависимостей, чтобы это выполнилось один раз
@@ -742,51 +762,6 @@ export default function ChatInterface() {
                 <p className="text-gray-400 mb-8 text-base">
                   {getModeDescription(mode)}
                 </p>
-                
-                {/* CHAT INPUT - CLEAN DESIGN */}
-                <div className="relative max-w-5xl">
-                  <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={getPlaceholder()}
-                    rows={1}
-                    className="w-full px-6 py-6 pr-36 bg-slate-800/60 border border-blue-500/30 
-                              rounded-2xl backdrop-blur text-white placeholder-gray-400 text-lg
-                              focus:outline-none focus:border-blue-500 focus:bg-slate-800/80 resize-none h-16"
-                    disabled={isStreaming || !sessionId}
-                  />
-                  
-                  {/* INPUT ACTIONS */}
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
-                    <button 
-                      className="p-3 hover:bg-slate-700/50 rounded-lg transition-colors"
-                      title="Attach file"
-                    >
-                      <Paperclip className="w-6 h-6 text-gray-400" />
-                    </button>
-                    <button 
-                      onClick={() => setIsListening(!isListening)}
-                      className={`p-3 rounded-lg transition-colors ${
-                        isListening 
-                          ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
-                          : 'text-gray-400 hover:bg-slate-700/50'
-                      }`}
-                      title="Voice input"
-                    >
-                      <Mic className="w-6 h-6" />
-                    </button>
-                    <button 
-                      onClick={sendMessage}
-                      disabled={!input.trim() || isStreaming || !sessionId}
-                      className="p-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Send message"
-                    >
-                      <Send className="w-6 h-6 text-white" />
-                    </button>
-                  </div>
-                </div>
                 
                 {/* Chat History Status */}
                 {showChatHistoryMessage && (
@@ -910,6 +885,54 @@ export default function ChatInterface() {
             <div ref={bottomOfMessagesRef} />
           </div>
         )}
+      </div>
+
+      {/* Input Area */}
+      <div className="px-6 pb-4 pt-2 bg-gradient-to-t from-slate-800/90 via-slate-800/90 to-transparent">
+        <div className="relative max-w-4xl mx-auto">
+          <div className="relative">
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={getPlaceholder()}
+              rows={1}
+              className="w-full pl-6 pr-40 py-4 bg-slate-800/60 border border-blue-500/30 
+                        rounded-xl backdrop-blur text-white placeholder-gray-400
+                        focus:outline-none focus:border-blue-500 focus:bg-slate-800/80 resize-none transition-all duration-300"
+              style={{ minHeight: '56px' }}
+              disabled={isStreaming || !sessionId}
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <button 
+                className="p-3 hover:bg-slate-700/50 rounded-lg transition-colors"
+                title="Attach file"
+              >
+                <Paperclip className="w-5 h-5 text-gray-400" />
+              </button>
+              <button 
+                onClick={() => setIsListening(!isListening)}
+                className={`p-3 rounded-lg transition-colors ${
+                  isListening 
+                    ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
+                    : 'text-gray-400 hover:bg-slate-700/50'
+                }`}
+                title="Voice input"
+              >
+                <Mic className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={sendMessage}
+                disabled={!input.trim() || isStreaming || !sessionId}
+                className="p-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Send message"
+              >
+                <Send className="w-5 h-5 text-white" />
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <Toaster

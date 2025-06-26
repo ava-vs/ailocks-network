@@ -4,6 +4,8 @@ import { useConversation } from '@elevenlabs/react';
 import { Mic } from 'lucide-react';
 import { useState, useCallback, useEffect } from 'react';
 import { searchIntents, createIntent, getAilockProfile, gainAilockXp } from '../lib/api';
+import { getProfile, gainXp } from '../lib/ailock/api';
+import { useUserSession } from '../hooks/useUserSession';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 
@@ -21,24 +23,48 @@ const getSignedUrl = async (): Promise<string> => {
 
 export default function VoiceAgentWidget() {
   const [isVisible, setIsVisible] = useState(true);
+  const { currentUser } = useUserSession();
+  const [ailockId, setAilockId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (currentUser && currentUser.id !== 'loading') {
+      getProfile(currentUser.id)
+        .then(profile => {
+          if (profile) {
+            setAilockId(profile.id);
+          }
+        })
+        .catch(err => console.error("Failed to get Ailock ID for voice agent", err));
+    }
+  }, [currentUser]);
 
   const conversation = useConversation({
     onConnect: () => {
       console.log('✅ Voice agent connected');
-      toast.success('🎤 Ailock активен!');
+      toast.success('🎤 Ailock Online!');
     },
     onDisconnect: () => {
       console.log('❌ Voice agent disconnected');
-      toast('🔴 Агент отключился');
+      toast('🔴 Ailock Off!');
     },
     onMessage: (message: any) => {
       console.log('📨 Dispatching voice message to main chat:', message);
       window.dispatchEvent(new CustomEvent('add-message-to-chat', { detail: message }));
+      if (message.source === 'user' && ailockId) {
+        gainXp(ailockId, 'voice_message_sent')
+          .then(result => {
+            if (result.success) {
+              toast.success(`+${result.xpGained} XP (voice)`, { duration: 1500, icon: '🎙️' });
+              window.dispatchEvent(new CustomEvent('ailock-profile-updated'));
+            }
+          })
+          .catch(err => console.warn("Failed to gain XP for voice message", err));
+      }
     },
     onError: (error: any) => {
       console.error('💥 Voice agent error:', error);
       const errorMessage = error ? String(error) : 'Неизвестная ошибка';
-      toast.error('❌ Ошибка: ' + errorMessage);
+      toast.error('❌ Error: ' + errorMessage);
     },
     clientTools: {
       search_intents: async ({ query }: any) => {
@@ -52,8 +78,18 @@ export default function VoiceAgentWidget() {
         try {
           const results = await searchIntents(query);
           console.log(`[Tool] Found ${results.length} results.`);
+          
+          // Отправляем результаты в боковую панель (аналогично текстовому чату)
           window.dispatchEvent(new CustomEvent('voice-search-results', { detail: { query, results } }));
-          window.dispatchEvent(new CustomEvent('display-results-in-chat', { detail: { intents: results.slice(0, 3) } }));
+          
+          // Отправляем интенты в чат через тот же механизм, что и текстовый чат
+          window.dispatchEvent(new CustomEvent('voice-intents-found', { 
+            detail: { 
+              intents: results.slice(0, 3),
+              query: query,
+              source: 'voice'
+            } 
+          }));
 
           if (!results || results.length === 0) {
             return `I couldn't find any intents matching "${query}". You can try a different search or create a new intent.`;
@@ -84,7 +120,7 @@ export default function VoiceAgentWidget() {
       } catch (err) {
         console.error('💥 Failed to start conversation:', err);
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        toast.error(`Ошибка запуска: ${errorMessage}`);
+        toast.error(`Failed to start: ${errorMessage}`);
       }
     }
   }, [conversation]);

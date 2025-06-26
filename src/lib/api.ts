@@ -3,9 +3,30 @@ const API_BASE = '/.netlify/functions';
 export const searchIntents = async (query: string) => {
   try {
     const userLocation = JSON.parse(localStorage.getItem('userLocation') || '{}');
-    const response = await fetch(`${API_BASE}/intents-list?query=${encodeURIComponent(query)}&userCountry=${userLocation.country || ''}&userCity=${userLocation.city || ''}`);
-    if (!response.ok) throw new Error('Failed to fetch intents');
+    const userId = localStorage.getItem('userId');
+    
+    const params = new URLSearchParams({
+      search: query,
+      userCountry: userLocation.country || 'US',
+      userCity: userLocation.city || 'New York',
+      limit: '10'
+    });
+    
+    // Only add userId if it's a valid UUID (not demo-user-1 or similar)
+    if (userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(userId)) {
+      params.append('userId', userId);
+    }
+    
+    console.log('🔍 Searching intents with params:', params.toString());
+    
+    const response = await fetch(`${API_BASE}/intents-list?${params}`);
+    if (!response.ok) {
+      console.warn(`⚠️ Search failed with status ${response.status}, returning empty results`);
+      return [];
+    }
     const data = await response.json();
+    
+    console.log('✅ Search results:', data.intents?.length || 0, 'intents found');
     return data.intents || [];
   } catch (error) {
     console.error('Search intents error:', error);

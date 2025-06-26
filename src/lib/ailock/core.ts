@@ -74,6 +74,7 @@ export interface FullAilockProfile extends AilockProfile {
 
 export type XpEventType = 
   | 'chat_message_sent'
+  | 'voice_message_sent'
   | 'intent_created'
   | 'skill_used_successfully'
   | 'achievement_unlocked'
@@ -83,6 +84,7 @@ export type XpEventType =
 
 const XP_REWARDS: Record<XpEventType, number> = {
   chat_message_sent: 5,
+  voice_message_sent: 10,
   intent_created: 25,
   skill_used_successfully: 15,
   achievement_unlocked: 50,
