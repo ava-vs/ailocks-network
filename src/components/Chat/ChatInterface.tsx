@@ -715,7 +715,7 @@ export default function ChatInterface() {
   }, [isPersistentSession]);
 
   const handleXpGain = async () => {
-    const profile = ailockProfileRef.current;
+    const profile = ailockProfile;
     if (!profile || !profile.id) {
       console.error("Cannot gain XP: Ailock profile or ID is missing.", { profile });
       return;
