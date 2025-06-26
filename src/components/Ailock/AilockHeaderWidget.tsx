@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useUserSession } from '@/hooks/useUserSession';
 import { ailockApi } from '@/lib/ailock/api';
 import type { FullAilockProfile } from '@/lib/ailock/core';
@@ -71,16 +71,18 @@ export default function AilockHeaderWidget() {
         <div className="relative">
           <button 
             onClick={() => setIsQuickStatusOpen(true)}
-            className="flex items-center space-x-3 hover:bg-white/10 rounded-lg p-2 transition-colors cursor-pointer border border-white/20"
+            className="flex items-center space-x-3 hover:bg-white/10 rounded-lg p-2 transition-colors cursor-pointer border border-white/20 ailock-widget"
           >
             {/* Avatar */}
             <div className="relative">
               <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getAvatarGradient()} p-0.5`}>
                 <div className="w-full h-full rounded-lg bg-slate-800/90 flex items-center justify-center">
+                  {/* CRITICAL FIX 2: Remove Image Border */}
                   <img 
                     src="/images/ailock-avatar.png" 
                     alt="Ailock Avatar" 
                     className="w-8 h-8 object-contain animate-breathe"
+                    style={{border: 'none', outline: 'none'}}
                   />
                 </div>
               </div>
@@ -106,6 +108,11 @@ export default function AilockHeaderWidget() {
                 <span className="text-xs text-white/50">{profile.xp} XP</span>
               </div>
             </div>
+            
+            {/* CRITICAL FIX 2: Green triangle dropdown */}
+            <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
           </button>
 
           <AilockQuickStatus
