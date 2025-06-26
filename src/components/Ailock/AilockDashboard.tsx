@@ -28,6 +28,8 @@ export default function AilockDashboard({ isOpen, onClose, profile, onSkillUpgra
   const handleSkillUpgrade = async (skillId: string) => {
     try {
       await onSkillUpgrade(skillId);
+      // Notify other components about profile update
+      window.dispatchEvent(new CustomEvent('ailock-profile-updated'));
     } catch (error) {
       console.error('Failed to upgrade skill:', error);
     }
@@ -39,7 +41,7 @@ export default function AilockDashboard({ isOpen, onClose, profile, onSkillUpgra
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" onClick={onClose} />
       
       {/* Dashboard Modal */}
-      <div className="fixed inset-4 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden">
+      <div className="fixed top-4 bottom-20 left-4 right-4 md:left-20 md:right-20 bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <div className="flex items-center space-x-4">
@@ -88,7 +90,7 @@ export default function AilockDashboard({ isOpen, onClose, profile, onSkillUpgra
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 min-h-0">
           {activeTab === 'overview' && (
             <div className="grid lg:grid-cols-2 gap-8">
               {/* Left Column */}

@@ -56,7 +56,7 @@ export default function StatusBar() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 w-full h-12 bg-slate-900/95 backdrop-blur border-t border-gray-700 flex items-center justify-between px-6 z-50">
+    <div className="w-full h-12 bg-slate-900/95 backdrop-blur border border-gray-700 rounded-lg flex items-center justify-between px-6 z-60 relative">
       {/* LEFT STATUS */}
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2">
@@ -74,7 +74,7 @@ export default function StatusBar() {
         <span className="text-xs text-gray-400">Ailocks v8.0 • Ai2Ai Network</span>
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-          <span className="text-xs text-gray-400 px-2 py-1 border border-gray-600 rounded-lg">
+          <span className="text-xs text-gray-400 px-2 py-1 border border-gray-600 rounded-lg bg-slate-800/50">
             Built on Bolt
           </span>
         </div>

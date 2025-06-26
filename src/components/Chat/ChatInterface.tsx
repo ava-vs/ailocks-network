@@ -615,7 +615,7 @@ export default function ChatInterface() {
 
   // Show chat history message for 3 seconds when session becomes persistent
   useEffect(() => {
-    if (isPersistentSession && !showChatHistoryMessage) {
+    if (isPersistentSession) {
       setShowChatHistoryMessage(true);
       const timer = setTimeout(() => {
         setShowChatHistoryMessage(false);
@@ -623,7 +623,7 @@ export default function ChatInterface() {
       
       return () => clearTimeout(timer);
     }
-  }, [isPersistentSession, showChatHistoryMessage]);
+  }, [isPersistentSession]);
 
   const handleXpGain = async () => {
     if (!ailockProfile) return;
@@ -643,6 +643,9 @@ export default function ChatInterface() {
                 });
                 setAilockProfile(prev => prev ? {...prev, level: result.newLevel, skillPoints: (prev.skillPoints || 0) + result.skillPointsGained} : null);
             }
+
+            // Notify other components about profile update
+            window.dispatchEvent(new CustomEvent('ailock-profile-updated'));
         }
     } catch (error) {
         console.error("Failed to gain XP", error);

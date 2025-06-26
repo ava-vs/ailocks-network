@@ -27,8 +27,8 @@ export default function AilockQuickStatus({ isOpen, onClose, profile, onOpenFull
 
   // Daily tasks simulation
   const dailyTasks = [
-    { id: 1, text: 'Analyze market trends', completed: true, xp: 50 },
-    { id: 2, text: 'Process user queries', completed: true, xp: 100 },
+    { id: 1, text: 'Analyze market trends', completed: false, xp: 50 },
+    { id: 2, text: 'Process user queries', completed: false, xp: 100 },
     { id: 3, text: 'Generate insights', completed: false, xp: 75 }
   ];
 
@@ -36,12 +36,12 @@ export default function AilockQuickStatus({ isOpen, onClose, profile, onOpenFull
 
   return (
     <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/40 z-50" onClick={onClose} />
+      {/* Backdrop for closing when clicking outside */}
+      <div className="fixed inset-0 z-40" onClick={onClose} />
       
-      {/* Modal */}
-      <div className="fixed top-[55%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[480px] max-w-[90vw]">
-        <div className="glass-morphism-dark rounded-2xl p-8 border border-white/20 shadow-2xl">
+      {/* Dropdown positioned below the header button */}
+      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 w-[480px] max-w-[90vw]">
+        <div className="bg-slate-800/95 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-3">
@@ -73,7 +73,7 @@ export default function AilockQuickStatus({ isOpen, onClose, profile, onOpenFull
           </div>
 
           {/* Level Progress */}
-          <div className="mb-8">
+          <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-base font-medium text-white">Level Progress</span>
               <span className="text-sm text-white/60">Level {profile.level}</span>
@@ -89,12 +89,12 @@ export default function AilockQuickStatus({ isOpen, onClose, profile, onOpenFull
               <span className="text-sm text-white/50">{progressXp}/{requiredXp} XP</span>
             </div>
             <p className="text-sm text-white/40 mt-2">
-              {650} XP to next level
+              {requiredXp - progressXp} XP to next level
             </p>
           </div>
 
           {/* Today's Task */}
-          <div className="mb-8">
+          <div className="mb-6">
             <h4 className="text-base font-medium text-white mb-4">Today's Task</h4>
             <div className="space-y-3">
               {dailyTasks.map((task) => (

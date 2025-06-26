@@ -63,7 +63,11 @@ export default function AilockAvatar({
       >
         <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center relative overflow-hidden">
           {/* Avatar Content */}
-          <div className="text-2xl">🤖</div>
+          <img 
+            src="/images/ailock-character.png" 
+            alt="Ailock Avatar" 
+            className={`${size === 'large' ? 'w-24 h-24' : size === 'medium' ? 'w-12 h-12' : 'w-8 h-8'} object-contain ${animated ? 'animate-breathe' : ''}`}
+          />
           
           {/* Particle Effects for High Level */}
           {level >= 15 && animated && (

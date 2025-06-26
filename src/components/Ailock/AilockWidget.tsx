@@ -35,6 +35,8 @@ export default function AilockWidget() {
     try {
       await ailockApi.upgradeSkill(profile.id, skillId);
       await loadProfile(); // Refresh profile
+      // Notify other components about profile update
+      window.dispatchEvent(new CustomEvent('ailock-profile-updated'));
     } catch (error) {
       console.error('Failed to upgrade skill:', error);
       throw error;

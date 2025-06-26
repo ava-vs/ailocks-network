@@ -44,21 +44,31 @@ export default function MyAilockPage() {
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-        <p className="text-white/60">Loading your Ailock...</p>
+      <div className="h-full flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white/60 text-lg">Loading your Ailock...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <div className="text-red-400 mb-4">⚠️</div>
-        <p className="text-white/60">Failed to load your Ailock. Please try again.</p>
-        <button onClick={loadProfile} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded">
-          Retry
-        </button>
+      <div className="h-full flex items-center justify-center p-8">
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-red-400 text-2xl">⚠️</span>
+          </div>
+          <h2 className="text-white text-xl font-semibold mb-2">Failed to Load Ailock</h2>
+          <p className="text-white/60 mb-6">{error}</p>
+          <button 
+            onClick={loadProfile} 
+            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
@@ -68,11 +78,13 @@ export default function MyAilockPage() {
   }
 
   return (
-    <AilockDashboard
-      isOpen={true}
-      onClose={() => window.location.href = '/'}
-      profile={profile}
-      onSkillUpgrade={handleSkillUpgrade}
-    />
+    <div className="h-full">
+      <AilockDashboard
+        isOpen={true}
+        onClose={() => window.location.href = '/'}
+        profile={profile}
+        onSkillUpgrade={handleSkillUpgrade}
+      />
+    </div>
   );
 } 

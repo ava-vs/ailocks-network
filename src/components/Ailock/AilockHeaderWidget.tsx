@@ -16,6 +16,18 @@ export default function AilockHeaderWidget() {
     }
   }, [currentUser.id]);
 
+  // Listen for profile updates from other components
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      if (currentUser.id && currentUser.id !== 'loading') {
+        loadProfile();
+      }
+    };
+
+    window.addEventListener('ailock-profile-updated', handleProfileUpdate);
+    return () => window.removeEventListener('ailock-profile-updated', handleProfileUpdate);
+  }, [currentUser.id]);
+
   const loadProfile = async () => {
     try {
       setLoading(true);
@@ -56,51 +68,53 @@ export default function AilockHeaderWidget() {
 
     return (
       <>
-        <button 
-          onClick={() => setIsQuickStatusOpen(true)}
-          className="flex items-center space-x-3 hover:bg-white/10 rounded-lg p-2 transition-colors cursor-pointer border border-white/20"
-        >
-          {/* Avatar */}
-          <div className="relative">
-            <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getAvatarGradient()} p-0.5`}>
-              <div className="w-full h-full rounded-lg bg-slate-800/90 flex items-center justify-center">
-                <img 
-                  src="/images/ailock-avatar.png" 
-                  alt="Ailock Avatar" 
-                  className="w-8 h-8 object-contain animate-breathe"
-                />
+        <div className="relative">
+          <button 
+            onClick={() => setIsQuickStatusOpen(true)}
+            className="flex items-center space-x-3 hover:bg-white/10 rounded-lg p-2 transition-colors cursor-pointer border border-white/20"
+          >
+            {/* Avatar */}
+            <div className="relative">
+              <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getAvatarGradient()} p-0.5`}>
+                <div className="w-full h-full rounded-lg bg-slate-800/90 flex items-center justify-center">
+                  <img 
+                    src="/images/ailock-avatar.png" 
+                    alt="Ailock Avatar" 
+                    className="w-8 h-8 object-contain animate-breathe"
+                  />
+                </div>
+              </div>
+              {/* Level badge */}
+              <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                {profile.level}
               </div>
             </div>
-            {/* Level badge */}
-            <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-              {profile.level}
-            </div>
-          </div>
 
-          {/* Info */}
-          <div className="flex flex-col">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm font-medium text-white/90">{profile.name}</span>
-              <span className="text-xs text-white/60">Level {profile.level}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-24 bg-white/10 rounded-full h-1.5 overflow-hidden" title={`${progressXp}/${requiredXp} XP`}>
-                <div 
-                  className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-500"
-                  style={{ width: `${xpPercentage}%` }}
-                ></div>
+            {/* Info */}
+            <div className="flex flex-col">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium text-white/90">{profile.name}</span>
+                <span className="text-xs text-white/60">Level {profile.level}</span>
               </div>
-              <span className="text-xs text-white/50">{profile.xp} XP</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-24 bg-white/10 rounded-full h-1.5 overflow-hidden" title={`${progressXp}/${requiredXp} XP`}>
+                  <div 
+                    className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-500"
+                    style={{ width: `${xpPercentage}%` }}
+                  ></div>
+                </div>
+                <span className="text-xs text-white/50">{profile.xp} XP</span>
+              </div>
             </div>
-          </div>
-        </button>
+          </button>
 
-        <AilockQuickStatus
-          isOpen={isQuickStatusOpen}
-          onClose={() => setIsQuickStatusOpen(false)}
-          profile={profile}
-          onOpenFullProfile={handleOpenFullProfile}
-        />
+          <AilockQuickStatus
+            isOpen={isQuickStatusOpen}
+            onClose={() => setIsQuickStatusOpen(false)}
+            profile={profile}
+            onOpenFullProfile={handleOpenFullProfile}
+          />
+        </div>
       </>
     );
   }
