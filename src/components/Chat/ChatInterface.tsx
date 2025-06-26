@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Mic, Bot, MessageCircle, Copy, Plus, MapPin, TrendingUp, Users, CheckCircle, XCircle, Loader, ArrowRight, BrainCircuit, Search, DraftingCompass } from 'lucide-react';
+import { Send, Paperclip, Mic, Bot, MessageCircle, Copy, Plus, MapPin, TrendingUp, Users, CheckCircle, XCircle, Loader, ArrowRight, BrainCircuit, Search, DraftingCompass, Eye } from 'lucide-react';
 import { useStore } from '@nanostores/react';
 import { appState, setMode, setLanguage, type AIMode, type Language } from '../../lib/store';
 import { useUserSession } from '../../hooks/useUserSession';
