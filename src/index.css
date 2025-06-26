@@ -214,6 +214,60 @@
   .intents-collapsed-panel {
     display: none !important;
   }
+  
+  /* Main pricing container */
+  .pricing-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    justify-content: center;
+  }
+
+  /* Ensure cards don't get too wide */
+  .pricing-card {
+    max-width: 350px;
+    width: 100%;
+    background: rgba(51, 65, 85, 0.6);
+    border: 1px solid rgba(74, 158, 255, 0.2);
+    border-radius: 16px;
+    padding: 24px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    position: relative;
+    margin: 0 auto;
+  }
+
+  .pricing-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(74, 158, 255, 0.4);
+    box-shadow: 0 10px 40px rgba(74, 158, 255, 0.1);
+  }
+
+  /* Most Popular badge */
+  .most-popular-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  
+  /* Featured card */
+  .featured {
+    order: -1; /* Show most popular first on mobile */
+  }
 }
 
 @keyframes slideInUp {
@@ -299,6 +353,47 @@
   p {
     font-size: 0.875rem;
     line-height: 1.5;
+  }
+}
+
+/* Responsive design for pricing cards */
+@media (max-width: 1200px) {
+  .pricing-container {
+    max-width: 900px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    padding: 16px;
+  }
+  
+  .pricing-card {
+    max-width: 320px;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .pricing-container {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+    gap: 20px;
+  }
+  
+  .pricing-card {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .pricing-container {
+    padding: 12px;
+  }
+  
+  .pricing-card {
+    padding: 16px;
+  }
+  
+  .current-price {
+    font-size: 2.5rem;
   }
 }
 

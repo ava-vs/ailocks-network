@@ -10,10 +10,15 @@ interface PricingPlan {
   name: string;
   price: number;
   period: string;
+  originalPrice?: string;
+  discount?: string;
   description: string;
   features: string[];
   highlighted?: boolean;
   popular?: boolean;
+  badge?: string | null;
+  buttonText: string;
+  buttonStyle: 'primary' | 'secondary' | 'premium';
   stripePriceId?: string;
   limits: {
     queries: number | 'unlimited';
@@ -55,46 +60,50 @@ export default function PricingPage() {
         contact: 'Contact Sales',
         freeTrial: '14-day free trial',
         noCommitment: 'No commitment, cancel anytime',
+        limitedOffer: '🎉 Limited Time: 40% OFF Your First 3 Months!',
+        trustedBy: 'Trusted by 10,000+ professionals',
+        reviews: '4.9/5 from 500+ reviews',
         plans: {
           free: {
-            name: 'Free',
+            name: 'Starter',
             description: 'Perfect for getting started',
             features: [
-              '100 AI queries per month',
+              '50 AI queries per month',
               'Basic intent matching',
               'Standard chat interface',
               'Community support',
-              'Basic analytics'
-            ]
+              'Basic collaboration tools'
+            ],
+            buttonText: 'Start Free Today',
+            buttonStyle: 'secondary'
           },
           pro: {
-            name: 'Pro',
+            name: 'Professional',
             description: 'Advanced features',
             features: [
-              '2,000 AI queries per month',
+              '1,500 AI queries per month',
               'Semantic search with embeddings',
-              'Smart chain decomposition',
+              'Smart intent matching', 
               'Voice Agent Interface',
-              'Priority AI models',
-              'Advanced analytics',
-              'Email support',
-              'Custom integrations'
-            ]
+              'Priority support',
+              'Advanced analytics'
+            ],
+            buttonText: 'Try Pro for $6',
+            buttonStyle: 'primary'
           },
           enterprise: {
-            name: 'Premium',
+            name: 'Enterprise',
             description: 'Full-scale solution',
             features: [
               'Unlimited AI queries',
-              'All premium AI models',
-              'Video Agent Interface',
-              'Better custom AI training',
-              'White-label solution',
-              'Dedicated account manager',
-              'SLA guarantee',
+              'All premium AI models', 
+              'Video Agent Interface (Talvus)',
               'Custom integrations',
-              'Advanced security'
-            ]
+              'White-label solution',
+              'Dedicated support'
+            ],
+            buttonText: 'Get Enterprise Demo',
+            buttonStyle: 'premium'
           }
         },
         faqItems: [
@@ -133,46 +142,50 @@ export default function PricingPage() {
         contact: 'Связаться',
         freeTrial: '14-дневная пробная версия',
         noCommitment: 'Без обязательств',
+        limitedOffer: '🎉 Ограниченное время: Скидка 40% на первые 3 месяца!',
+        trustedBy: 'Нам доверяют более 10,000 профессионалов',
+        reviews: '4.9/5 из более чем 500 отзывов',
         plans: {
           free: {
-            name: 'Бесплатный',
+            name: 'Базовый',
             description: 'Для начала работы',
             features: [
-              '100 запросов к ИИ в месяц',
+              '50 запросов к ИИ в месяц',
               'Базовое сопоставление',
               'Стандартный интерфейс',
               'Поддержка сообщества',
-              'Базовая аналитика'
-            ]
+              'Базовые инструменты'
+            ],
+            buttonText: 'Начать бесплатно',
+            buttonStyle: 'secondary'
           },
           pro: {
-            name: 'Про',
+            name: 'Профессиональный',
             description: 'Расширенные функции',
             features: [
-              '2,000 запросов к ИИ в месяц',
+              '1,500 запросов к ИИ в месяц',
               'Семантический поиск',
-              'Умная декомпозиция',
+              'Умное сопоставление', 
               'Голосовой интерфейс',
-              'Приоритетные модели ИИ',
-              'Расширенная аналитика',
-              'Поддержка по email',
-              'Интеграции'
-            ]
+              'Приоритетная поддержка',
+              'Расширенная аналитика'
+            ],
+            buttonText: 'Попробовать за $6',
+            buttonStyle: 'primary'
           },
           enterprise: {
-            name: 'Премиум',
+            name: 'Корпоративный',
             description: 'Полное решение',
             features: [
               'Неограниченные запросы',
               'Все премиум модели',
               'Видео-интерфейс',
-              'Обучение ИИ',
-              'White-label решение',
-              'Выделенный менеджер',
-              'Гарантия SLA',
               'Интеграции',
-              'Безопасность'
-            ]
+              'White-label решение',
+              'Выделенная поддержка'
+            ],
+            buttonText: 'Получить демо',
+            buttonStyle: 'premium'
           }
         },
         faqItems: [
@@ -205,16 +218,18 @@ export default function PricingPage() {
     return Math.floor(yearlyPrice / 12);
   };
 
-  const plans: PricingPlan[] = [
+  const pricingPlans: PricingPlan[] = [
     {
       id: 'free',
       name: texts.plans.free.name,
       price: 0,
-      period: texts.monthly,
+      period: billingPeriod === 'monthly' ? texts.monthly : texts.yearly,
       description: texts.plans.free.description,
       features: texts.plans.free.features,
+      buttonText: texts.plans.free.buttonText,
+      buttonStyle: 'secondary',
       limits: {
-        queries: 100,
+        queries: 50,
         aiModels: ['DeepSeek Free'],
         storage: '1GB',
         support: 'Community'
@@ -223,15 +238,20 @@ export default function PricingPage() {
     {
       id: 'pro',
       name: texts.plans.pro.name,
-      price: billingPeriod === 'monthly' ? 29 : getYearlyPrice(29),
+      price: billingPeriod === 'monthly' ? 10 : getYearlyPrice(10),
       period: billingPeriod === 'monthly' ? texts.monthly : texts.yearly,
+      originalPrice: billingPeriod === 'monthly' ? '$19' : '$15',
+      discount: billingPeriod === 'monthly' ? 'First 3 months: $6/month (40% OFF)' : 'First year: $8/month (40% OFF)',
       description: texts.plans.pro.description,
       features: texts.plans.pro.features,
+      badge: '⭐ ' + texts.popular,
+      buttonText: texts.plans.pro.buttonText,
+      buttonStyle: 'primary',
       highlighted: true,
       popular: true,
       stripePriceId: billingPeriod === 'monthly' ? 'price_pro_monthly' : 'price_pro_yearly',
       limits: {
-        queries: 2000,
+        queries: 1500,
         aiModels: ['GPT-4', 'Claude-3.5', 'DeepSeek'],
         storage: '50GB',
         support: 'Email'
@@ -240,10 +260,15 @@ export default function PricingPage() {
     {
       id: 'enterprise',
       name: texts.plans.enterprise.name,
-      price: billingPeriod === 'monthly' ? 99 : getYearlyPrice(99),
+      price: billingPeriod === 'monthly' ? 39 : getYearlyPrice(39),
       period: billingPeriod === 'monthly' ? texts.monthly : texts.yearly,
+      originalPrice: billingPeriod === 'monthly' ? '$65' : '$52',
+      discount: billingPeriod === 'monthly' ? 'First 3 months: $23/month (40% OFF)' : 'First year: $31/month (40% OFF)',
       description: texts.plans.enterprise.description,
       features: texts.plans.enterprise.features,
+      badge: '🚀 Best Value',
+      buttonText: texts.plans.enterprise.buttonText,
+      buttonStyle: 'premium',
       stripePriceId: billingPeriod === 'monthly' ? 'price_enterprise_monthly' : 'price_enterprise_yearly',
       limits: {
         queries: 'unlimited',
@@ -283,15 +308,87 @@ export default function PricingPage() {
     );
   }
 
+  const PricingCard = ({ plan }: { plan: PricingPlan }) => (
+    <div className={`pricing-card ${plan.badge ? 'featured' : ''}`}>
+      {/* Badge */}
+      {plan.badge && (
+        <div className="most-popular-badge">
+          {plan.badge}
+        </div>
+      )}
+      
+      {/* Header */}
+      <div className="card-header text-center mb-5">
+        <h3 className="text-xl font-semibold text-white mb-2">{plan.name}</h3>
+        
+        {/* Price */}
+        <div className="price-section">
+          {plan.originalPrice && (
+            <div className="original-price text-gray-400 line-through text-sm mb-1">
+              {plan.originalPrice}{plan.period}
+            </div>
+          )}
+          <div className="current-price text-3xl font-bold text-white">
+            ${plan.price}
+            <span className="text-sm text-gray-400 font-normal">{plan.period}</span>
+          </div>
+          {plan.discount && (
+            <div className="discount-offer text-green-400 text-xs mt-2 font-medium">
+              🔥 {plan.discount}
+            </div>
+          )}
+        </div>
+        
+        <p className="text-gray-300 text-xs mt-2">{plan.description}</p>
+      </div>
+      
+      {/* Features */}
+      <div className="features-list mb-5">
+        {plan.features.map((feature, index) => (
+          <div key={index} className="feature-item flex items-start gap-2 mb-2">
+            <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+            <span className="text-gray-300 text-xs">{feature}</span>
+          </div>
+        ))}
+      </div>
+      
+      {/* CTA Button */}
+      <button
+        onClick={() => handleUpgrade(plan.id)}
+        disabled={isLoading && selectedPlan === plan.id}
+        className={`cta-button w-full py-2 px-4 rounded-lg font-medium text-sm transition-all ${
+          plan.buttonStyle === 'primary' 
+            ? 'bg-blue-500 hover:bg-blue-600 text-white transform hover:scale-105' 
+            : plan.buttonStyle === 'premium'
+            ? 'bg-purple-500 hover:bg-purple-600 text-white'
+            : 'bg-gray-700 hover:bg-gray-600 text-white'
+        }`}
+      >
+        {isLoading && selectedPlan === plan.id ? (
+          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto"></div>
+        ) : (
+          plan.buttonText
+        )}
+      </button>
+      
+      {/* Guarantee */}
+      <div className="guarantee text-center mt-2">
+        <span className="text-xs text-gray-400">
+          {plan.price === 0 ? 'No credit card required' : '30-day money-back guarantee'}
+        </span>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
       {/* Header */}
       <Header />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto main-content">
         {/* Hero Section */}
-        <div className="relative py-12 px-4 sm:px-6 lg:px-8">
+        <div className="relative py-8 px-4 sm:px-6 lg:px-8">
           <div className="max-w-6xl mx-auto text-center">
             {/* Back Button */}
             <button
@@ -302,12 +399,17 @@ export default function PricingPage() {
               <span>{texts.backToApp}</span>
             </button>
 
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
               {texts.title}
             </h1>
-            <p className="text-lg text-white/80 mb-8 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg text-white/80 mb-6 max-w-2xl mx-auto leading-relaxed">
               {texts.subtitle}
             </p>
+
+            {/* Limited Time Offer Banner */}
+            <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white py-2 px-4 rounded-full inline-block mb-6 text-sm">
+              {texts.limitedOffer}
+            </div>
 
             {/* Billing Toggle */}
             <div className="flex items-center justify-center mb-8">
@@ -339,116 +441,27 @@ export default function PricingPage() {
             </div>
 
             {/* Pricing Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
-              {plans.map((plan) => (
-                <div
-                  key={plan.id}
-                  className={`relative rounded-xl p-5 sm:p-6 transition-all duration-300 hover:scale-105 ${
-                    plan.highlighted
-                      ? 'bg-gradient-to-br from-blue-500/20 to-indigo-600/20 border border-blue-400/50 shadow-xl shadow-blue-500/10'
-                      : 'bg-white/5 border border-white/10 hover:bg-white/10'
-                  }`}
-                >
-                  {plan.popular && (
-                    <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                      <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center space-x-1">
-                        <Star className="w-3 h-3" />
-                        <span>{texts.popular}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="text-center mb-5">
-                    <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
-                    <div className="mb-3">
-                      <span className="text-3xl font-bold text-white">${plan.price}</span>
-                      <span className="text-white/60 ml-1 text-sm">/{plan.period}</span>
-                    </div>
-                    <p className="text-white/70 text-xs">{plan.description}</p>
-                  </div>
-
-                  {/* Features */}
-                  <div className="space-y-3 mb-6">
-                    {plan.features.slice(0, 5).map((feature, index) => (
-                      <div key={index} className="flex items-start space-x-2">
-                        <Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                        <span className="text-white/80 text-xs">{feature}</span>
-                      </div>
-                    ))}
-                    {plan.features.length > 5 && (
-                      <div className="text-center">
-                        <button className="text-blue-400 text-xs hover:underline">
-                          +{plan.features.length - 5} more features
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Limits */}
-                  <div className="border-t border-white/10 pt-4 mb-5">
-                    <div className="space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-white/60">Queries/month:</span>
-                        <span className="text-white font-medium">
-                          {typeof plan.limits.queries === 'number' 
-                            ? plan.limits.queries.toLocaleString() 
-                            : plan.limits.queries}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-white/60">AI Models:</span>
-                        <span className="text-white font-medium">{plan.limits.aiModels.join(', ')}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-white/60">Storage:</span>
-                        <span className="text-white font-medium">{plan.limits.storage}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* CTA Button */}
-                  <button
-                    onClick={() => handleUpgrade(plan.id)}
-                    disabled={isLoading && selectedPlan === plan.id}
-                    className={`w-full py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 text-sm ${
-                      plan.highlighted
-                        ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl'
-                        : plan.id === 'free'
-                        ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-                        : 'bg-white/5 hover:bg-white/10 text-white border border-white/10 hover:border-white/20'
-                    }`}
-                  >
-                    {isLoading && selectedPlan === plan.id ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        {plan.id === 'free' ? (
-                          <span>{texts.currentPlan}</span>
-                        ) : (
-                          <>
-                            <Crown className="w-4 h-4" />
-                            <span>{plan.id === 'pro' ? texts.upgrade : texts.getStarted}</span>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </button>
-
-                  {plan.id !== 'free' && (
-                    <p className="text-center text-white/50 text-xs mt-2">
-                      {texts.freeTrial}
-                    </p>
-                  )}
-                </div>
+            <div className="pricing-container">
+              {pricingPlans.map((plan) => (
+                <PricingCard key={plan.id} plan={plan} />
               ))}
+            </div>
+
+            {/* Social Proof */}
+            <div className="text-center mt-10">
+              <p className="text-gray-400 mb-2 text-sm">{texts.trustedBy}</p>
+              <div className="flex justify-center items-center gap-2">
+                <span className="text-yellow-400">⭐⭐⭐⭐⭐</span>
+                <span className="text-gray-300 text-sm">{texts.reviews}</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Features Section */}
-        <div className="py-12 px-4 sm:px-6 lg:px-8 bg-white/5">
+        <div className="py-10 px-4 sm:px-6 lg:px-8 bg-white/5">
           <div className="max-w-5xl mx-auto">
-            <h2 className="text-2xl font-bold text-white text-center mb-10">{texts.whatYouGet}</h2>
+            <h2 className="text-2xl font-bold text-white text-center mb-8">{texts.whatYouGet}</h2>
             <div className="grid md:grid-cols-3 gap-6">
               <div className="text-center">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-4">
@@ -476,9 +489,9 @@ export default function PricingPage() {
         </div>
 
         {/* FAQ Section */}
-        <div className="py-12 px-4 sm:px-6 lg:px-8">
+        <div className="py-10 px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-bold text-white text-center mb-8">{texts.faq}</h2>
+            <h2 className="text-2xl font-bold text-white text-center mb-6">{texts.faq}</h2>
             <div className="space-y-4">
               {texts.faqItems.map((item, index) => (
                 <div key={index} className="bg-white/5 rounded-lg p-4 border border-white/10">
@@ -506,7 +519,7 @@ export default function PricingPage() {
               <div className="flex items-center justify-between p-4 border-b border-white/10">
                 <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
                   <Crown className="w-5 h-5 text-blue-400" />
-                  <span>Upgrade to {plans.find(p => p.id === selectedPlan)?.name}</span>
+                  <span>Upgrade to {pricingPlans.find(p => p.id === selectedPlan)?.name}</span>
                 </h3>
                 <button
                   onClick={() => setShowModal(false)}
