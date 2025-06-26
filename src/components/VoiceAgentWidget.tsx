@@ -63,7 +63,7 @@ export default function VoiceAgentWidget() {
     },
     onError: (error: any) => {
       console.error('💥 Voice agent error:', error);
-      const errorMessage = error ? String(error) : 'Неизвестная ошибка';
+      const errorMessage = error ? String(error) : 'Unknown error';
       toast.error('❌ Error: ' + errorMessage);
     },
     clientTools: {
