@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Paperclip, Mic, Bot, MessageCircle, Copy, Plus, MapPin, TrendingUp, Users, CheckCircle, XCircle, Loader, ArrowRight, BrainCircuit, Search, DraftingCompass, Eye } from 'lucide-react';
+import { Send, Paperclip, Bot, MessageCircle, Copy, Plus, MapPin, TrendingUp, Users, CheckCircle, XCircle, Loader, ArrowRight, BrainCircuit, Search, DraftingCompass, Eye } from 'lucide-react';
 import { useStore } from '@nanostores/react';
 import { appState, setMode, setLanguage, type AIMode, type Language } from '../../lib/store';
 import { useUserSession } from '../../hooks/useUserSession';
@@ -11,7 +11,6 @@ import type { FullAilockProfile } from '../../lib/ailock/core';
 import LevelUpModal from '../Ailock/LevelUpModal';
 import { searchIntents } from '../../lib/api';
 import toast from 'react-hot-toast';
-import VoiceAgentClientWrapper from '../VoiceAgentClientWrapper';
 
 interface Message {
   id: string;
@@ -28,6 +27,7 @@ interface SuggestedAction {
   description: string;
   icon: string;
   priority: string;
+  timeline?: string;
 }
 
 interface IntentCard {
@@ -86,6 +86,18 @@ export default function ChatInterface() {
   
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomOfMessagesRef = useRef<HTMLDivElement>(null);
+
+  const getAvatarBorderColor = () => {
+    switch (voiceState) {
+      case 'listening':
+      case 'speaking':
+        return 'border-green-400/60 shadow-green-500/10';
+      case 'processing':
+        return 'border-yellow-400/60 shadow-yellow-500/10';
+      default: // idle
+        return 'border-blue-400/60 shadow-blue-500/10';
+    }
+  };
 
   const scrollToBottom = () => {
     bottomOfMessagesRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -684,19 +696,20 @@ export default function ChatInterface() {
   };
 
   const handleVoiceClick = () => {
-    if (voiceState === 'idle') {
-      setVoiceState('listening');
-      setTimeout(() => {
-        setVoiceState('processing');
-        setTimeout(() => {
-          setVoiceState('speaking');
-          setTimeout(() => setVoiceState('idle'), 2000);
-        }, 1500);
-      }, 3000);
-    } else {
-      setVoiceState('idle');
-    }
+    window.dispatchEvent(new CustomEvent('toggle-voice-agent'));
   };
+
+  // Listen to status updates from VoiceAgentWidget
+  useEffect(() => {
+    const updateStatus = (e: CustomEvent) => {
+      const { status } = e.detail;
+      setVoiceState(status);
+    };
+    window.addEventListener('voice-status-update', updateStatus as EventListener);
+    return () => {
+      window.removeEventListener('voice-status-update', updateStatus as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     // Handler for text messages from voice
@@ -749,69 +762,54 @@ export default function ChatInterface() {
     };
   }, []); 
 
-  const isListening = voiceState !== 'idle';
-
   return (
-    <div className="h-full flex flex-col bg-gradient-to-b from-slate-900/95 to-slate-800/95 backdrop-blur-xl">
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto min-h-0 p-6">
-        {messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full px-8 ml-16 mr-16 min-h-[calc(100vh-120px)]"
-               style={{
-                 background: 'radial-gradient(ellipse at center, rgba(74, 158, 255, 0.03) 0%, transparent 70%)',
-                 backdropFilter: 'blur(1px)'
-               }}>
-            <div className="max-w-5xl w-full flex items-center gap-10">
-              {/* AILOCK CHARACTER ON LEFT */}
-              <div className="flex-shrink-0">
-                {/* Voice animations */}
-                <div className="relative">
-                  {voiceState === 'listening' && (
-                    <>
-                      <div className="absolute w-32 h-32 border-2 border-red-400/40 rounded-full animate-ping" 
-                          style={{animationDuration: '1s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-                      <div className="absolute w-40 h-40 border border-red-300/30 rounded-full animate-ping" 
-                          style={{animationDuration: '1.5s', animationDelay: '0.2s', left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-                    </>
-                  )}
-                  
-                  {voiceState === 'processing' && (
-                    <div className="absolute w-32 h-32 border-2 border-yellow-400/40 rounded-full animate-spin"
-                         style={{left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-                  )}
-                  
-                  {voiceState === 'speaking' && (
-                    <div className="absolute w-32 h-32 border-2 border-green-400/40 rounded-full animate-pulse"
-                         style={{left: '50%', top: '50%', transform: 'translate(-50%, -50%)'}}></div>
-                  )}
-                  
-                  <img 
-                    src="/images/ailock-character.png" 
-                    alt="Ailock AI Assistant"
-                    className={`w-28 h-28 object-contain drop-shadow-2xl animate-float cursor-pointer z-10 ${
-                      voiceState !== 'idle' ? 'scale-110' : 'hover:scale-105'
-                    }`}
-                    style={{
-                      filter: 'drop-shadow(0 0 20px rgba(74, 158, 255, 0.3))',
-                      aspectRatio: '1/1'
-                    }}
-                    onClick={handleVoiceClick}
-                  />
-                  
-                  {/* Voice state text */}
-                  <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 text-center">
-                    <span className="text-xs text-gray-400">
-                      {voiceState === 'idle' && 'Click to speak'}
-                      {voiceState === 'listening' && '🔴 Listening...'}
-                      {voiceState === 'processing' && '⚡ Processing...'}
-                      {voiceState === 'speaking' && '🗣️ Speaking...'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* TEXT CONTENT ON RIGHT */}
-              <div className="flex-1">
+    <div className="h-full flex bg-slate-900/90 text-white">
+      {/* Left Panel: Avatar */}
+      <div className="w-[320px] flex-shrink-0 flex items-center justify-center p-6 border-r border-slate-700/50">
+        <div className={`flex flex-col items-center gap-4 p-6 rounded-2xl border-2 shadow-lg transition-all duration-300 ${getAvatarBorderColor()}`}>
+          <div className="relative w-32 h-32">
+            {voiceState === 'listening' && (
+              <>
+                <div className="absolute inset-0 border-2 border-red-400/40 rounded-full animate-ping" style={{animationDuration: '1s'}}></div>
+                <div className="absolute inset-0 scale-125 border border-red-300/30 rounded-full animate-ping" style={{animationDuration: '1.5s', animationDelay: '0.2s'}}></div>
+              </>
+            )}
+            {voiceState === 'processing' && (
+              <div className="absolute inset-0 border-2 border-yellow-400/40 rounded-full animate-spin"></div>
+            )}
+            {voiceState === 'speaking' && (
+              <div className="absolute inset-0 border-2 border-green-400/40 rounded-full animate-pulse"></div>
+            )}
+            <img 
+              src="/images/ailock-character.png" 
+              alt="Ailock AI Assistant"
+              className={`w-full h-full object-contain drop-shadow-2xl animate-float cursor-pointer z-10 transition-transform ${
+                voiceState !== 'idle' ? 'scale-110' : 'hover:scale-105'
+              }`}
+              style={{
+                filter: 'drop-shadow(0 0 20px rgba(74, 158, 255, 0.3))',
+              }}
+              onClick={handleVoiceClick}
+            />
+          </div>
+          <div className="h-5 text-center">
+            <span className="text-xs text-gray-400">
+              {voiceState === 'idle' && 'Click me to speak'}
+              {voiceState === 'listening' && '🔴 Listening...'}
+              {voiceState === 'processing' && '⚡ Processing...'}
+              {voiceState === 'speaking' && '🗣️ Speaking...'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Panel: Chat */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto min-h-0 p-6">
+          {messages.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="max-w-md text-center">
                 <h1 className="text-4xl font-bold mb-4 text-white">
                   {getWelcomeText().welcome}
                 </h1>
@@ -821,178 +819,119 @@ export default function ChatInterface() {
                 <p className="text-gray-400 mb-8 text-base">
                   {getModeDescription(mode)}
                 </p>
-                
-                {/* CHAT INPUT - CLEAN DESIGN */}
-                <div className="relative max-w-5xl">
-                  <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={getPlaceholder()}
-                    rows={1}
-                    className="chat-textarea w-full px-6 py-6 pr-36 bg-slate-800/60 border border-blue-500/30 
-                              rounded-2xl backdrop-blur text-white placeholder-gray-400 text-lg
-                              focus:outline-none focus:border-blue-500 focus:bg-slate-800/80 resize-none h-16"
-                    disabled={isStreaming || !sessionId}
-                  />
-                  
-                  {/* INPUT ACTIONS */}
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
-                    <button 
-                      className="p-3 hover:bg-slate-700/50 rounded-lg transition-colors"
-                      title="Attach file"
-                    >
-                      <Paperclip className="w-6 h-6 text-gray-400" />
-                    </button>
-                    <button 
-                      onClick={handleVoiceClick}
-                      className={`p-3 rounded-lg transition-colors ${
-                        isListening 
-                          ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
-                          : 'text-gray-400 hover:bg-slate-700/50'
-                      }`}
-                      title="Voice input"
-                    >
-                      <Mic className="w-6 h-6" />
-                    </button>
-                    <button 
-                      onClick={sendMessage}
-                      disabled={!input.trim() || isStreaming || !sessionId}
-                      className="p-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Send message"
-                    >
-                      <Send className="w-6 h-6 text-white" />
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Chat History Status */}
-                {showChatHistoryMessage && (
-                  <div className="mt-6 p-4 bg-emerald-500/20 border border-emerald-500/30 rounded-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div className="flex items-center space-x-2 text-emerald-400 mb-2">
-                      <span className="font-medium">💾 Chat History Enabled</span>
-                    </div>
-                    <p className="text-emerald-300 text-sm">
-                      Your conversations with Ailock are being saved and will persist across sessions.
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
-          </div>
-        ) : (
-          <div className="max-w-4xl mx-auto">
-            {messages.map(message => (
-              <React.Fragment key={message.id}>
-                <MessageBubble 
-                  message={message} 
-                  isStreaming={streamingMessageId === message.id}
-                />
-                {message.role === 'assistant' && message.intents && message.intents.length > 0 && (
-                  <div className="mb-6 ml-12">
-                    <div className="grid gap-4">
-                      {message.intents.map((intent: IntentCard) => (
-                        <div 
-                          key={intent.id}
-                          onClick={() => handleIntentCardClick(intent)}
-                          className="bg-gradient-to-br from-blue-500/10 to-indigo-600/10 border border-blue-500/30 rounded-xl p-4 cursor-pointer hover:from-blue-500/20 hover:to-indigo-600/20 transition-all shadow-lg hover:shadow-xl"
-                        >
-                          <div className="flex items-start justify-between mb-3">
-                            <h4 className="text-white font-medium text-sm flex-1">
-                              {intent.title}
-                            </h4>
-                            <div className="flex items-center space-x-2 ml-2">
-                              {intent.matchScore && (
-                                <div className="flex items-center space-x-1 bg-blue-500/20 text-blue-400 px-2 py-1 rounded-lg border border-blue-500/30">
-                                  <span className="text-xs font-medium">{intent.matchScore}% match</span>
+          ) : (
+            <div className="max-w-4xl mx-auto">
+              {messages.map(message => (
+                <React.Fragment key={message.id}>
+                  <MessageBubble 
+                    message={message} 
+                    isStreaming={streamingMessageId === message.id}
+                  />
+                  {message.role === 'assistant' && message.intents && message.intents.length > 0 && (
+                    <div className="mb-6 ml-12">
+                      <div className="grid gap-4">
+                        {message.intents.map((intent: IntentCard) => (
+                          <div 
+                            key={intent.id}
+                            onClick={() => handleIntentCardClick(intent)}
+                            className="bg-gradient-to-br from-blue-500/10 to-indigo-600/10 border border-blue-500/30 rounded-xl p-4 cursor-pointer hover:from-blue-500/20 hover:to-indigo-600/20 transition-all shadow-lg hover:shadow-xl"
+                          >
+                            <div className="flex items-start justify-between mb-3">
+                              <h4 className="text-white font-medium text-sm flex-1">
+                                {intent.title}
+                              </h4>
+                              <div className="flex items-center space-x-2 ml-2">
+                                {intent.matchScore && (
+                                  <div className="flex items-center space-x-1 bg-blue-500/20 text-blue-400 px-2 py-1 rounded-lg border border-blue-500/30">
+                                    <span className="text-xs font-medium">{intent.matchScore}% match</span>
+                                  </div>
+                                )}
+                                {intent.priority === 'urgent' && (
+                                  <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg border text-xs ${getPriorityColor(intent.priority)}`}>
+                                    <span className="font-medium">Urgent</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <p className="text-white/60 text-xs leading-relaxed mb-3">
+                              {intent.description}
+                            </p>
+                            
+                            <div className="flex flex-wrap gap-1 mb-3">
+                              {intent.requiredSkills.slice(0, 3).map((skill) => (
+                                <span 
+                                  key={skill}
+                                  className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded-md text-xs font-medium border border-purple-500/30"
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                              {intent.requiredSkills.length > 3 && (
+                                <span className="text-white/40 text-xs px-2 py-1">
+                                  +{intent.requiredSkills.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center justify-between text-xs">
+                              {intent.distance && (
+                                <div className="flex items-center space-x-2 text-white/50">
+                                  <MapPin className="w-3 h-3" />
+                                  <span>{intent.distance}</span>
                                 </div>
                               )}
-                              {intent.priority === 'urgent' && (
-                                <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg border text-xs ${getPriorityColor(intent.priority)}`}>
-                                  <span className="font-medium">Urgent</span>
-                                </div>
+                              {intent.budget && (
+                                <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded border border-emerald-500/30">
+                                  {intent.budget}
+                                </span>
                               )}
                             </div>
                           </div>
-                          
-                          <p className="text-white/60 text-xs leading-relaxed mb-3">
-                            {intent.description}
-                          </p>
-                          
-                          <div className="flex flex-wrap gap-1 mb-3">
-                            {intent.requiredSkills.slice(0, 3).map((skill) => (
-                              <span 
-                                key={skill}
-                                className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded-md text-xs font-medium border border-purple-500/30"
-                              >
-                                {skill}
-                              </span>
-                            ))}
-                            {intent.requiredSkills.length > 3 && (
-                              <span className="text-white/40 text-xs px-2 py-1">
-                                +{intent.requiredSkills.length - 3} more
-                              </span>
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center justify-between text-xs">
-                            {intent.distance && (
-                              <div className="flex items-center space-x-2 text-white/50">
-                                <MapPin className="w-3 h-3" />
-                                <span>{intent.distance}</span>
-                              </div>
-                            )}
-                            {intent.budget && (
-                              <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded border border-emerald-500/30">
-                                {intent.budget}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
+                  )}
+                </React.Fragment>
+              ))}
+              
+              {/* Intent Preview */}
+              {showIntentPreview && intentPreview && (
+                <IntentPreview
+                  title={intentPreview.title}
+                  description={intentPreview.description}
+                  category={intentPreview.category}
+                  requiredSkills={intentPreview.requiredSkills}
+                  location={location}
+                  budget={intentPreview.budget}
+                  timeline={intentPreview.timeline}
+                  priority={intentPreview.priority}
+                  onConfirm={handleCreateIntent}
+                  onCancel={handleCancelIntent}
+                  isLoading={isCreatingIntent}
+                />
+              )}
+              
+              {isStreaming && !streamingMessageId && (
+                <div className="flex items-center space-x-3 text-white/60 mb-6">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+                    <Bot className="w-4 h-4 text-white" />
                   </div>
-                )}
-              </React.Fragment>
-            ))}
-            
-            {/* Intent Preview */}
-            {showIntentPreview && intentPreview && (
-              <IntentPreview
-                title={intentPreview.title}
-                description={intentPreview.description}
-                category={intentPreview.category}
-                requiredSkills={intentPreview.requiredSkills}
-                location={location}
-                budget={intentPreview.budget}
-                timeline={intentPreview.timeline}
-                priority={intentPreview.priority}
-                onConfirm={handleCreateIntent}
-                onCancel={handleCancelIntent}
-                isLoading={isCreatingIntent}
-              />
-            )}
-            
-            {isStreaming && !streamingMessageId && (
-              <div className="flex items-center space-x-3 text-white/60 mb-6">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                  <Bot className="w-4 h-4 text-white" />
+                  <div className="flex space-x-1">
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
                 </div>
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                </div>
-              </div>
-            )}
-            <div ref={bottomOfMessagesRef} />
-          </div>
-        )}
-      </div>
+              )}
+              <div ref={bottomOfMessagesRef} />
+            </div>
+          )}
+        </div>
 
-      {/* Input Area - отображается только после первого сообщения */}
-      {messages.length > 0 && (
+        {/* Unified Input Area */}
         <div className="px-6 pb-4 pt-2 bg-gradient-to-t from-slate-800/90 via-slate-800/90 to-transparent">
           <div className="relative max-w-5xl mx-auto">
             <div className="chat-input-container relative">
@@ -1017,17 +956,6 @@ export default function ChatInterface() {
                   <Paperclip className="w-6 h-6 text-gray-400" />
                 </button>
                 <button 
-                  onClick={handleVoiceClick}
-                  className={`p-3 rounded-lg transition-colors ${
-                    isListening 
-                      ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
-                      : 'text-gray-400 hover:bg-slate-700/50'
-                  }`}
-                  title="Voice input"
-                >
-                  <Mic className="w-6 h-6" />
-                </button>
-                <button 
                   onClick={sendMessage}
                   disabled={!input.trim() || isStreaming || !sessionId}
                   className="p-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1039,7 +967,7 @@ export default function ChatInterface() {
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {levelUpInfo && (
         <LevelUpModal
@@ -1050,9 +978,6 @@ export default function ChatInterface() {
           xpGained={levelUpInfo.xpGained}
         />
       )}
-      
-      {/* Voice Agent Widget - Client Only */}
-      <VoiceAgentClientWrapper />
     </div>
   );
-}
+};

@@ -1,13 +1,11 @@
 'use client';
 
 import { useConversation } from '@elevenlabs/react';
-import { Mic } from 'lucide-react';
 import { useState, useCallback, useEffect } from 'react';
 import { searchIntents, createIntent, getAilockProfile, gainAilockXp } from '../lib/api';
 import { getProfile, gainXp } from '../lib/ailock/api';
 import { useUserSession } from '../hooks/useUserSession';
 import toast from 'react-hot-toast';
-import { cn } from '../lib/utils';
 
 const AGENT_ID = import.meta.env.PUBLIC_AGENT_ID || import.meta.env.AGENT_ID;
 
@@ -22,15 +20,8 @@ const getSignedUrl = async (): Promise<string> => {
 };
 
 export default function VoiceAgentWidget() {
-  const [isVisible, setIsVisible] = useState(true);
-  const [isClient, setIsClient] = useState(false);
   const { currentUser } = useUserSession();
   const [ailockId, setAilockId] = useState<string | null>(null);
-
-  // Убедимся, что мы на клиенте
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   useEffect(() => {
     if (currentUser && currentUser.id !== 'loading') {
@@ -85,10 +76,8 @@ export default function VoiceAgentWidget() {
           const results = await searchIntents(query);
           console.log(`[Tool] Found ${results.length} results.`);
           
-          // Отправляем результаты в боковую панель (аналогично текстовому чату)
           window.dispatchEvent(new CustomEvent('voice-search-results', { detail: { query, results } }));
           
-          // Отправляем интенты в чат через тот же механизм, что и текстовый чат
           window.dispatchEvent(new CustomEvent('voice-intents-found', { 
             detail: { 
               intents: results.slice(0, 3),
@@ -109,13 +98,31 @@ export default function VoiceAgentWidget() {
       },
     }
   });
+  
+  useEffect(() => {
+    const { status, isListening, isSpeaking } = conversation as any;
+    let voiceState: 'idle' | 'listening' | 'processing' | 'speaking' = 'idle';
+
+    if (status === 'connecting' || status === 'disconnecting') {
+      voiceState = 'processing';
+    } else if (isListening) {
+      voiceState = 'listening';
+    } else if (isSpeaking) {
+      voiceState = 'speaking';
+    } else if (status === 'connected') {
+      voiceState = 'idle'; 
+    }
+
+    window.dispatchEvent(new CustomEvent('voice-status-update', { detail: { status: voiceState } }));
+  }, [(conversation as any).status, (conversation as any).isListening, (conversation as any).isSpeaking]);
+
 
   const handleToggleConversation = useCallback(async () => {
     const currentStatus = String(conversation.status);
     if (currentStatus === 'connected') {
       console.log('⏹️ Stopping conversation...');
       await conversation.endSession();
-    } else if (currentStatus === 'disconnected' || currentStatus === 'error') {
+    } else if (currentStatus === 'disconnected' || currentStatus === 'error' || currentStatus === 'idle') {
       console.log('🎤 Attempting to start conversation...');
       window.dispatchEvent(new CustomEvent('voice-session-started'));
       try {
@@ -130,54 +137,15 @@ export default function VoiceAgentWidget() {
       }
     }
   }, [conversation]);
-
-  useEffect(() => {
-    const userPlan = localStorage.getItem('userPlan') || 'free';
-    if (userPlan === 'free') {
-      setIsVisible(false);
-      console.log('❌ Voice agent hidden - free plan');
-    } else {
-      console.log('✅ Voice agent visible - plan:', userPlan);
-    }
-  }, []);
-
-  // Не рендерим на сервере или если не видим
-  if (!isClient || !isVisible) return null;
-
-  const getButtonAppearance = (currentStatus: typeof conversation.status): string => {
-    switch (String(currentStatus)) {
-      case 'connecting':
-      case 'disconnecting':
-        return 'bg-yellow-500 hover:bg-yellow-600 animate-pulse';
-      case 'connected':
-        return 'bg-green-500 hover:bg-green-600';
-      case 'error':
-      default:
-        return 'bg-blue-600 hover:bg-blue-700';
-    }
-  };
   
-  const isDisabled = conversation.status === 'connecting' || conversation.status === 'disconnecting';
+  useEffect(() => {
+    const handleToggle = () => handleToggleConversation();
+    window.addEventListener('toggle-voice-agent', handleToggle);
+    return () => {
+      window.removeEventListener('toggle-voice-agent', handleToggle);
+    };
+  }, [handleToggleConversation]);
 
-  return (
-    <>
-      <div className="fixed bottom-20 right-8 z-40 flex flex-col items-center gap-2">
-        <button
-          onClick={handleToggleConversation}
-          disabled={isDisabled}
-          className={cn(
-            "w-16 h-16 rounded-full flex items-center justify-center text-white shadow-lg transition-colors duration-300",
-            getButtonAppearance(conversation.status),
-            isDisabled && "cursor-not-allowed opacity-70"
-          )}
-          title={conversation.status === 'connected' ? "Отключить агента" : "Активировать агента"}
-        >
-          <Mic size={24} />
-        </button>
-        <div className="bg-black bg-opacity-70 text-white text-xs px-3 py-1 rounded-full capitalize">
-          {conversation.status || 'disconnected'}
-        </div>
-      </div>
-    </>
-  );
+  // This component is now "headless" and renders nothing.
+  return null;
 }
