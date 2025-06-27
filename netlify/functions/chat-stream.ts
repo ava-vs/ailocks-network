@@ -11,6 +11,10 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
+// Check if we're in local development mode
+// In production, URL env var is always set by Netlify, and DATABASE_URL should exist
+const isLocalDev = !process.env.URL || process.env.URL?.includes('localhost') || process.env.URL?.includes('127.0.0.1');
+
 export default async (request: Request) => {
   // Handle CORS preflight
   if (request.method === 'OPTIONS') {
@@ -44,7 +48,7 @@ export default async (request: Request) => {
       });
     }
 
-    console.log('🔄 Processing chat message for session:', sessionId, 'user:', userId);
+    console.log('🔄 Processing chat message for session:', sessionId, 'user:', userId, 'local dev mode:', isLocalDev);
 
     // Check if this is a fallback session (non-UUID format)
     const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sessionId);
@@ -52,13 +56,13 @@ export default async (request: Request) => {
     let session = null;
     let useDatabase = false;
 
-    if (isValidUUID) {
-      // Try to get existing session from database
+    if (isValidUUID && !isLocalDev) {
+      // Try to get existing session from database (only in production)
       session = await chatService.getSession(sessionId);
       useDatabase = true;
     }
     
-    if (!session && userId && userId !== 'loading' && userId !== 'error') {
+    if (!session && userId && userId !== 'loading' && userId !== 'error' && !isLocalDev) {
       try {
         console.log('🆕 Creating new session for user:', userId);
         const newSessionId = await chatService.createSession(userId, mode, language);
@@ -73,7 +77,7 @@ export default async (request: Request) => {
 
     if (!session) {
       // Create temporary session context for processing
-      console.log('⚠️ Using temporary session context');
+      console.log('⚠️ Using temporary session context (local dev mode or fallback)');
       session = {
         id: sessionId,
         userId: userId || 'anonymous',
@@ -99,16 +103,21 @@ export default async (request: Request) => {
     };
 
     const userMessageForDb = { ...userMessage, role: 'user' as const };
-    if (useDatabase && isValidUUID) {
-      console.log('💾 Saving user message to database...');
-      await chatService.saveMessage(sessionId, userMessageForDb);
+    if (useDatabase && isValidUUID && !isLocalDev) {
+      try {
+        console.log('💾 Saving user message to database...');
+        await chatService.saveMessage(sessionId, userMessageForDb);
+      } catch (error) {
+        console.warn('⚠️ Failed to save user message to database, continuing without persistence:', error);
+        useDatabase = false;
+      }
     } else {
-      console.log('⚠️ Skipping database save for fallback session');
+      console.log('⚠️ Skipping database save (local dev mode or fallback session)');
     }
 
     if (streaming) {
       // Server-Sent Events streaming response
-      const streamBody = await streamAilockResponse(message, mode, language, location, sessionId, useDatabase);
+      const streamBody = await streamAilockResponse(message, mode, language, location, sessionId, useDatabase && !isLocalDev);
       return new Response(streamBody, {
         status: 200,
         headers: {
@@ -137,9 +146,13 @@ export default async (request: Request) => {
         };
 
         // Save assistant message to session if using database
-        if (useDatabase && isValidUUID) {
-          console.log('💾 Saving assistant message to database...');
-          await chatService.saveMessage(sessionId, assistantMessage);
+        if (useDatabase && isValidUUID && !isLocalDev) {
+          try {
+            console.log('💾 Saving assistant message to database...');
+            await chatService.saveMessage(sessionId, assistantMessage);
+          } catch (error) {
+            console.warn('⚠️ Failed to save assistant message to database:', error);
+          }
         }
 
         return new Response(JSON.stringify({
@@ -172,9 +185,13 @@ export default async (request: Request) => {
         };
 
         // Save fallback message to session if using database
-        if (useDatabase && isValidUUID) {
-          console.log('💾 Saving fallback message to database...');
-          await chatService.saveMessage(sessionId, assistantMessage);
+        if (useDatabase && isValidUUID && !isLocalDev) {
+          try {
+            console.log('💾 Saving fallback message to database...');
+            await chatService.saveMessage(sessionId, assistantMessage);
+          } catch (error) {
+            console.warn('⚠️ Failed to save fallback message to database:', error);
+          }
         }
 
         return new Response(JSON.stringify({
@@ -307,8 +324,12 @@ async function streamAilockResponse(
 
     // Save assistant message to session if using database
     if (useDatabase) {
-      console.log('💾 Saving streamed assistant message to database...');
-      await chatService.saveMessage(sessionId, assistantMessage);
+      try {
+        console.log('💾 Saving streamed assistant message to database...');
+        await chatService.saveMessage(sessionId, assistantMessage);
+      } catch (error) {
+        console.warn('⚠️ Failed to save streamed assistant message to database:', error);
+      }
     }
 
     // Send completion event
@@ -344,8 +365,12 @@ async function streamAilockResponse(
         metadata: { fallback: true }
       };
 
-      console.log('💾 Saving fallback message to database...');
-      await chatService.saveMessage(sessionId, assistantMessage);
+      try {
+        console.log('💾 Saving fallback message to database...');
+        await chatService.saveMessage(sessionId, assistantMessage);
+      } catch (error) {
+        console.warn('⚠️ Failed to save fallback message to database:', error);
+      }
     }
   }
 
@@ -383,24 +408,88 @@ function analyzeUserIntent(message: string, mode: string, language: string): any
 }
 
 async function searchRelevantIntents(userMessage: string, location: any, userIntent: any): Promise<any[]> {
-  // Mock implementation, replace with actual database query
-  // In a real implementation, this would use embeddings for semantic search
-  return Promise.resolve([]);
+  try {
+    // Build query parameters for intent search
+    const searchQuery = encodeURIComponent(userMessage);
+    const userCountry = location?.country || 'US';
+    const userCity = location?.city || 'New York';
+    
+    // Construct the URL for internal API call
+    const baseUrl = process.env.URL || 'http://localhost:8888';
+    const searchUrl = `${baseUrl}/.netlify/functions/intents-list?search=${searchQuery}&userCountry=${userCountry}&userCity=${userCity}&limit=5`;
+    
+    console.log(`🔍 Searching intents with: "${userMessage}" for ${userCity}, ${userCountry}`);
+    
+    // Make internal API call to search intents
+    const response = await fetch(searchUrl);
+    
+    if (!response.ok) {
+      console.warn(`⚠️ Intent search failed with status: ${response.status}`);
+      return [];
+    }
+    
+    const data = await response.json();
+    const intents = data.intents || [];
+    
+    console.log(`✅ Found ${intents.length} relevant intents`);
+    
+    // Filter and enhance results based on user message content
+    const relevantIntents = intents
+      .filter((intent: any) => intent.matchScore > 40) // Only show high-confidence matches
+      .map((intent: any) => ({
+        ...intent,
+        // Add additional context-specific matching
+        relevanceReason: generateRelevanceReason(userMessage, intent)
+      }));
+    
+    return relevantIntents;
+    
+  } catch (error) {
+    console.error('❌ Error searching intents:', error);
+    return [];
+  }
+}
+
+function generateRelevanceReason(userMessage: string, intent: any): string {
+  const userWords = userMessage.toLowerCase().split(/\s+/);
+  const intentText = `${intent.title} ${intent.description}`.toLowerCase();
+  
+  const matchedSkills = intent.requiredSkills?.filter((skill: string) => 
+    userWords.some(word => skill.toLowerCase().includes(word) || word.includes(skill.toLowerCase()))
+  ) || [];
+  
+  const matchedCategories = userWords.filter(word => 
+    intent.category.toLowerCase().includes(word) || word.includes(intent.category.toLowerCase())
+  );
+  
+  if (matchedSkills.length > 0) {
+    return `Matches your skills: ${matchedSkills.slice(0, 2).join(', ')}`;
+  }
+  
+  if (matchedCategories.length > 0) {
+    return `Relevant to ${intent.category}`;
+  }
+  
+  if (intent.semanticMatch) {
+    return `AI-powered semantic match`;
+  }
+  
+  return `Geographic match in ${intent.targetCity || intent.targetCountry || 'your area'}`;
 }
 
 function generateIntentBasedResponse(intents: any[], language: string): any {
   if (intents.length === 0) {
     return {
       content: "I couldn't find any relevant opportunities for you.",
-      actions: []
+      actions: [],
+      intents: []
     };
   }
 
   const texts = {
     en: {
-      found: `I found ${intents.length} relevant opportunities for you:`,
-      analyzing: "Based on your request, I've analyzed available opportunities in your area.",
-      suggestion: "Here are the most relevant matches I found:",
+      found: `🎯 I found ${intents.length} relevant opportunities for you. Check them out below:`,
+      analyzing: "Based on your skills and interests, I've found some exciting collaboration opportunities.",
       actions: {
         viewDetails: "View Details",
         contact: "Contact",
@@ -409,9 +498,8 @@ function generateIntentBasedResponse(intents: any[], language: string): any {
       }
     },
     ru: {
-      found: `Я нашел ${intents.length} релевантных возможностей для вас:`,
-      analyzing: "На основе вашего запроса я проанализировал доступные возможности в вашем районе.",
-      suggestion: "Вот наиболее подходящие варианты, которые я нашел:",
+      found: `🎯 Я нашел ${intents.length} релевантных возможностей для вас. Посмотрите их ниже:`,
+      analyzing: "На основе ваших навыков и интересов я нашел интересные возможности для сотрудничества.",
       actions: {
         viewDetails: "Подробнее",
         contact: "Связаться",
@@ -423,7 +511,10 @@ function generateIntentBasedResponse(intents: any[], language: string): any {
 
   const t = texts[language as keyof typeof texts] || texts.en;
   
-  const content = `${t.analyzing}\n\n${t.found}\n\n${t.suggestion}`;
+  // Create a short, clean message that refers to the intent cards below
+  const content = `${t.analyzing}\n\n${t.found}`;
+  
+  // The actual intents will be displayed as cards below the message, not in the text
   
   const actions = [
     {
@@ -449,7 +540,7 @@ function generateIntentBasedResponse(intents: any[], language: string): any {
     }
   ];
 
-  return { content, actions };
+  return { content, actions, intents };
 }
 
 function generateNoIntentsResponse(language: string): any {

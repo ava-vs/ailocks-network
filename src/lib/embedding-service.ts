@@ -22,6 +22,10 @@ export class EmbeddingService {
     }
 
     try {
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const response = await fetch(this.OPENAI_API_URL, {
         method: 'POST',
         headers: {
@@ -32,18 +36,39 @@ export class EmbeddingService {
           input: text.substring(0, 8000), // Limit text length for cost optimization
           model: this.MODEL,
           encoding_format: 'float'
-        })
+        }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const error = await response.text();
         throw new Error(`OpenAI API error: ${response.status} - ${error}`);
       }
 
-      const result: EmbeddingResponse = await response.json();
-      return result.embedding;
+      // The OpenAI embeddings endpoint returns a list with one embedding object
+      // { object: 'list', data: [ { embedding: number[] } ], model: '...', usage: { ... } }
+      // We extract data[0].embedding to get raw vector as number[]
+      const json = await response.json();
+
+      const embedding: number[] | undefined = json?.data?.[0]?.embedding;
+
+      if (!embedding || !Array.isArray(embedding)) {
+        throw new Error('OpenAI response did not contain a valid embedding');
+      }
+
+      return embedding;
     } catch (error) {
-      console.error('Failed to generate embedding:', error);
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.error('OpenAI API request timed out after 10 seconds');
+          throw new Error('OpenAI API timeout');
+        }
+        console.error('Failed to generate embedding:', error.message);
+      } else {
+        console.error('Failed to generate embedding:', error);
+      }
       throw error;
     }
   }
@@ -172,18 +197,28 @@ export class EmbeddingService {
 
   async findSimilarIntents(queryEmbedding: number[], limit: number = 10, threshold: number = 0.8) {
     try {
-      // Use PostgreSQL vector similarity search
+      // Guard: if embedding vector is empty or malformed, skip vector search
+      if (!Array.isArray(queryEmbedding) || queryEmbedding.length === 0) {
+        console.warn('⚠️ Empty embedding vector – skipping similarity search');
+        return [];
+      }
+
+      const vectorAsStr = JSON.stringify(queryEmbedding);
+      // Use PostgreSQL vector similarity search with explicit casting
+      // Using sql.raw to prevent parameterization of the vector, as it may cause issues with the driver
+      const vectorComparison = sql.raw(`embedding <=> CAST('${vectorAsStr}' AS vector)`);
+
       const results = await db.execute(sql`
         SELECT 
           id, title, description, category, required_skills,
           budget, timeline, priority, created_at, user_id,
           target_country, target_city,
-          embedding <=> ${JSON.stringify(queryEmbedding)} as similarity_score
+          ${vectorComparison} as similarity_score
         FROM intents 
         WHERE embedding IS NOT NULL 
           AND status = 'active'
-          AND embedding <=> ${JSON.stringify(queryEmbedding)} < ${1 - threshold}
-        ORDER BY embedding <=> ${JSON.stringify(queryEmbedding)}
+          AND ${vectorComparison} < ${1 - threshold}
+        ORDER BY ${vectorComparison}
         LIMIT ${limit}
       `);
 

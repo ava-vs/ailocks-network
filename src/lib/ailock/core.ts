@@ -74,6 +74,7 @@ export interface FullAilockProfile extends AilockProfile {
 
 export type XpEventType = 
   | 'chat_message_sent'
+  | 'voice_message_sent'
   | 'intent_created'
   | 'skill_used_successfully'
   | 'achievement_unlocked'
@@ -83,6 +84,7 @@ export type XpEventType =
 
 const XP_REWARDS: Record<XpEventType, number> = {
   chat_message_sent: 5,
+  voice_message_sent: 10,
   intent_created: 25,
   skill_used_successfully: 15,
   achievement_unlocked: 50,
@@ -195,52 +197,69 @@ export class AilockService {
     const xpAmount = XP_REWARDS[eventType] || 0;
     if (xpAmount === 0) return { success: false };
 
-    const ailock = await db.select().from(ailocks).where(eq(ailocks.id, ailockId)).limit(1);
-    if (!ailock[0]) throw new Error('Ailock not found');
+    // Try twice before surfacing the error. Many "fetch failed" issues with the
+    // neon-http driver are transient network glitches that disappear on retry.
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const ailock = await db.select().from(ailocks).where(eq(ailocks.id, ailockId)).limit(1);
+        if (!ailock[0]) throw new Error('Ailock not found');
 
-    const current = ailock[0];
-    const newXp = (current.xp || 0) + xpAmount;
-    
-    let currentLevel = current.level || 1;
-    let skillPointsGained = 0;
-    
-    const initialXp = current.xp || 0;
-    let xpForLevelUp = calculateXpForNextLevel(currentLevel)
-    
-    while (newXp >= initialXp + xpForLevelUp) {
-      currentLevel++;
-      skillPointsGained++;
-      xpForLevelUp += calculateXpForNextLevel(currentLevel);
+        const current = ailock[0];
+        const newXp = (current.xp || 0) + xpAmount;
+        
+        let currentLevel = current.level || 1;
+        let skillPointsGained = 0;
+        
+        const initialXp = current.xp || 0;
+        let xpForLevelUp = calculateXpForNextLevel(currentLevel);
+        
+        while (newXp >= initialXp + xpForLevelUp) {
+          currentLevel++;
+          skillPointsGained++;
+          xpForLevelUp += calculateXpForNextLevel(currentLevel);
+        }
+        
+        await db.update(ailocks).set({
+          xp: newXp,
+          level: currentLevel,
+          skillPoints: (current.skillPoints || 0) + skillPointsGained,
+          lastActiveAt: new Date(),
+          updatedAt: new Date(),
+        }).where(eq(ailocks.id, ailockId));
+
+        await db.insert(ailockXpHistory).values({
+          ailockId,
+          eventType,
+          xpGained: xpAmount,
+          description: `Gained ${xpAmount} XP from ${eventType.replace(/_/g, ' ')}`,
+          context,
+        });
+        
+        // TODO: Achievement check
+        const achievementsUnlocked = await this.checkAchievements(ailockId);
+
+        return {
+          success: true,
+          xpGained: xpAmount,
+          newXp,
+          leveledUp: skillPointsGained > 0,
+          newLevel: currentLevel,
+          skillPointsGained,
+          achievementsUnlocked,
+        };
+
+      } catch (err: any) {
+        const isNetworkError = typeof err?.message === 'string' && err.message.includes('fetch failed');
+        if (isNetworkError && attempt < 2) {
+          console.warn(`[AilockService] gainXp network error on attempt ${attempt}. Retrying after refreshing DB connection...`);
+          const { refreshDbConnection } = await import('../db');
+          refreshDbConnection();
+          await new Promise(res => setTimeout(res, 200)); // brief back-off
+          continue;
+        }
+        throw err;
+      }
     }
-    
-    await db.update(ailocks).set({
-      xp: newXp,
-      level: currentLevel,
-      skillPoints: (current.skillPoints || 0) + skillPointsGained,
-      lastActiveAt: new Date(),
-      updatedAt: new Date(),
-    }).where(eq(ailocks.id, ailockId));
-
-    await db.insert(ailockXpHistory).values({
-      ailockId,
-      eventType,
-      xpGained: xpAmount,
-      description: `Gained ${xpAmount} XP from ${eventType.replace(/_/g, ' ')}`,
-      context,
-    });
-    
-    // TODO: Achievement check
-    const achievementsUnlocked = await this.checkAchievements(ailockId);
-
-    return {
-      success: true,
-      xpGained: xpAmount,
-      newXp,
-      leveledUp: skillPointsGained > 0,
-      newLevel: currentLevel,
-      skillPointsGained,
-      achievementsUnlocked,
-    };
   }
 
   async upgradeSkill(ailockId: string, skillId: string): Promise<boolean> {

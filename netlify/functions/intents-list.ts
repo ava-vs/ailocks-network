@@ -32,12 +32,20 @@ export const handler: Handler = async (event) => {
       const allIntents: any[] = [];
       const intentIds = new Set<string>();
 
-      // 1. Semantic Search (for intents with embeddings)
+      // 1. Semantic Search (for intents with embeddings) - with timeout protection
       if (process.env.OPENAI_API_KEY) {
         try {
           console.log(`🧠 Performing semantic search for: "${searchQuery}"`);
-          const semanticResults = await embeddingService.searchByText(searchQuery, limit);
-          if (semanticResults.length > 0) {
+          
+          // Add timeout protection for semantic search
+          const semanticSearchPromise = embeddingService.searchByText(searchQuery, limit);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Semantic search timeout')), 5000)
+          );
+          
+          const semanticResults = await Promise.race([semanticSearchPromise, timeoutPromise]) as any[];
+          
+          if (semanticResults && semanticResults.length > 0) {
             console.log(`✅ Found ${semanticResults.length} semantic matches`);
             for (const intent of semanticResults) {
               if (!intentIds.has(intent.id)) {
@@ -45,23 +53,38 @@ export const handler: Handler = async (event) => {
                 intentIds.add(intent.id);
               }
             }
+          } else {
+            console.log('ℹ️ No semantic matches found');
           }
         } catch (semanticError) {
-          console.warn('⚠️ Semantic search failed, continuing with keyword search:', semanticError);
+          console.warn('⚠️ Semantic search failed, continuing with keyword search:', 
+            semanticError instanceof Error ? semanticError.message : semanticError);
         }
+      } else {
+        console.log('⚠️ No OpenAI API key found, skipping semantic search');
       }
 
-      // 2. Keyword Search (for all intents, as a fallback and for those without embeddings)
-      console.log(`📝 Performing keyword search for: "${searchQuery}"`);
+      // 2. Enhanced Keyword Search (for all intents, as a fallback and for those without embeddings)
+      console.log(`📝 Performing enhanced keyword search for: "${searchQuery}"`);
+      
+      // Extract keywords and synonyms for better matching
+      const searchTerms = extractSearchTerms(searchQuery);
+      console.log(`🔍 Search terms extracted: ${searchTerms.join(', ')}`);
+      
+             // Build dynamic search conditions
+       const searchConditions = searchTerms.map((term: string) => 
+         or(
+           sql`title ILIKE ${'%' + term + '%'}`,
+           sql`description ILIKE ${'%' + term + '%'}`,
+           sql`category ILIKE ${'%' + term + '%'}`,
+           sql`array_to_string(required_skills, ',') ILIKE ${'%' + term + '%'}`
+         )
+       );
+      
       const keywordResults = await db
         .select()
         .from(intents)
-        .where(
-          or(
-            sql`title ILIKE ${'%' + searchQuery + '%'}`,
-            sql`description ILIKE ${'%' + searchQuery + '%'}`
-          )
-        )
+        .where(or(...searchConditions))
         .limit(limit);
 
       for (const intent of keywordResults) {
@@ -293,4 +316,40 @@ function formatTimeAgo(date: Date | null): string {
   
   const diffDays = Math.floor(diffHours / 24);
   return `${diffDays} days ago`;
+}
+
+function extractSearchTerms(searchQuery: string): string[] {
+  // Convert query to lowercase and extract words
+  const words = searchQuery.toLowerCase().match(/\b\w+\b/g) || [];
+  
+  // Define synonyms and related terms for better matching
+  const synonyms: Record<string, string[]> = {
+    'designer': ['design', 'ux', 'ui', 'creative', 'visual', 'graphic'],
+    'design': ['designer', 'ux', 'ui', 'creative', 'visual', 'figma'],
+    'ux': ['design', 'user experience', 'designer', 'ui', 'usability'],
+    'ui': ['design', 'user interface', 'designer', 'ux', 'frontend'],
+    'creative': ['design', 'designer', 'artistic', 'visual'],
+    'developer': ['development', 'programming', 'coding', 'software', 'engineer'],
+    'development': ['developer', 'programming', 'coding', 'software', 'tech'],
+    'programmer': ['programming', 'developer', 'coding', 'software'],
+    'engineer': ['engineering', 'developer', 'technical', 'software'],
+    'analyst': ['analysis', 'research', 'data', 'analytics'],
+    'research': ['researcher', 'analysis', 'study', 'investigation'],
+    'marketing': ['marketer', 'promotion', 'advertising', 'content'],
+    'blockchain': ['crypto', 'web3', 'defi', 'smart contracts'],
+    'ai': ['artificial intelligence', 'machine learning', 'ml', 'nlp'],
+    'fintech': ['financial', 'banking', 'finance', 'payments']
+  };
+  
+  // Collect all search terms including synonyms
+  const allTerms = new Set<string>(words);
+  
+  // Add synonyms for each word
+  words.forEach(word => {
+    if (synonyms[word]) {
+      synonyms[word].forEach(synonym => allTerms.add(synonym));
+    }
+  });
+  
+  return Array.from(allTerms).filter(term => term.length > 2); // Filter out very short terms
 }
