@@ -54,6 +54,7 @@ export default function AilockQuickStatus({ isOpen, onClose, profile, onOpenFull
                     src="/images/ailock-avatar.png" 
                     alt="Ailock Avatar" 
                     className="w-8 h-8"
+                    style={{border: 'none', outline: 'none'}}
                   />
                 </div>
               </div>

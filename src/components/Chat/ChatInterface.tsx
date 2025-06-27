@@ -973,6 +973,12 @@ export default function ChatInterface() {
               <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
                 <button 
                   className="p-3 hover:bg-slate-700/50 rounded-lg transition-colors"
+                  title="Create Intent"
+                >
+                  <Plus className="w-6 h-6 text-gray-400" />
+                </button>
+                <button 
+                  className="p-3 hover:bg-slate-700/50 rounded-lg transition-colors"
                   title="Attach file"
                 >
                   <Paperclip className="w-6 h-6 text-gray-400" />

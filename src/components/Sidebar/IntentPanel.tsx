@@ -4,7 +4,6 @@ import { useStore } from '@nanostores/react';
 import { appState } from '../../lib/store';
 import { useUserSession } from '../../hooks/useUserSession';
 import { cn } from '../../lib/utils';
-import AilockWidget from '../Ailock/AilockWidget';
 
 interface Intent {
   id: string;
@@ -394,11 +393,6 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
               <X className="w-4 h-4 text-white/60" />
             </button>
           </div>
-        </div>
-
-        {/* Ailock Widget */}
-        <div className="mb-6">
-          <AilockWidget />
         </div>
 
         {activeSection === 'inWork' && (
