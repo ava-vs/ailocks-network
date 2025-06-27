@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Star, Trophy, TrendingUp } from 'lucide-react';
-import type { FullAilockProfile } from '@/lib/ailock/core';
+import type { FullAilockProfile } from '@/lib/ailock/shared';
+import { getLevelInfo } from '@/lib/ailock/shared';
 
 interface AilockQuickStatusProps {
   isOpen: boolean;
@@ -12,11 +13,13 @@ interface AilockQuickStatusProps {
 export default function AilockQuickStatus({ isOpen, onClose, profile, onOpenFullProfile }: AilockQuickStatusProps) {
   if (!isOpen || !profile) return null;
 
-  const xpForNextLevel = profile.level < 20 ? [100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950, 6750, 7600, 8500, 9450, 10450, 11500][profile.level - 1] || 11500 : 11500;
-  const currentLevelXp = profile.level > 1 ? [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950, 6750, 7600, 8500, 9450, 10450][profile.level - 2] || 0 : 0;
-  const progressXp = profile.xp - currentLevelXp;
-  const requiredXp = xpForNextLevel - currentLevelXp;
-  const xpPercentage = Math.min((progressXp / requiredXp) * 100, 100);
+  const levelInfo = getLevelInfo(profile.xp);
+  console.log('🔍 AilockQuickStatus Level Info:', {
+    currentXp: profile.xp,
+    dbLevel: profile.level,
+    calculatedLevel: levelInfo.level,
+    levelInfo
+  });
 
   const getAvatarGradient = () => {
     if (profile.level >= 15) return 'from-purple-400 via-pink-400 to-yellow-400';
@@ -76,20 +79,20 @@ export default function AilockQuickStatus({ isOpen, onClose, profile, onOpenFull
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-base font-medium text-white">Level Progress</span>
-              <span className="text-sm text-white/60">Level {profile.level}</span>
+              <span className="text-sm text-white/60">Level {levelInfo.level}</span>
             </div>
             <div className="flex items-center space-x-3">
               <span className="text-sm text-white/50">{profile.xp} XP</span>
               <div className="flex-1 bg-white/10 rounded-full h-3 overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-500"
-                  style={{ width: `${xpPercentage}%` }}
+                  style={{ width: `${levelInfo.progressPercentage}%` }}
                 />
               </div>
-              <span className="text-sm text-white/50">{progressXp}/{requiredXp} XP</span>
+              <span className="text-sm text-white/50">{levelInfo.progressXp}/{levelInfo.xpNeededForNextLevel} XP</span>
             </div>
             <p className="text-sm text-white/40 mt-2">
-              {requiredXp - progressXp} XP to next level
+              {levelInfo.xpToNextLevel} XP to next level
             </p>
           </div>
 

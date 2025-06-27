@@ -4,7 +4,8 @@ import AilockAvatar from './AilockAvatar';
 import CharacteristicsPanel from './CharacteristicsPanel';
 import SkillTreeCanvas from './SkillTreeCanvas';
 import { SKILL_TREE, getSkillEffect } from '@/lib/ailock/skills';
-import type { FullAilockProfile, AilockSkill, AilockAchievement, XpEvent } from '@/lib/ailock/core';
+import { getLevelInfo } from '@/lib/ailock/shared';
+import type { FullAilockProfile, AilockSkill, AilockAchievement, XpEvent } from '@/lib/ailock/shared';
 
 interface AilockDashboardProps {
   isOpen: boolean;
@@ -19,11 +20,7 @@ export default function AilockDashboard({ isOpen, onClose, profile, onSkillUpgra
 
   if (!isOpen || !profile) return null;
 
-  const xpForNextLevel = profile.level < 20 ? [100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950, 6750, 7600, 8500, 9450, 10450, 11500][profile.level - 1] || 11500 : 11500;
-  const currentLevelXp = profile.level > 1 ? [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950, 6750, 7600, 8500, 9450, 10450][profile.level - 2] || 0 : 0;
-  const progressXp = profile.xp - currentLevelXp;
-  const requiredXp = xpForNextLevel - currentLevelXp;
-  const xpPercentage = Math.min((progressXp / requiredXp) * 100, 100);
+  const levelInfo = getLevelInfo(profile.xp);
 
   const handleSkillUpgrade = async (skillId: string) => {
     try {
@@ -108,13 +105,13 @@ export default function AilockDashboard({ isOpen, onClose, profile, onSkillUpgra
                     <div className="w-full bg-white/10 rounded-full h-3 overflow-hidden">
                       <div 
                         className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
-                        style={{ width: `${xpPercentage}%` }}
+                        style={{ width: `${levelInfo.progressPercentage}%` }}
                       ></div>
                     </div>
                     
                     <div className="flex items-center justify-between text-sm text-white/60">
-                      <span>{progressXp} / {requiredXp} XP</span>
-                      <span>{profile.level < 20 ? `${requiredXp - progressXp} XP to next level` : 'Max Level'}</span>
+                      <span>{levelInfo.progressXp} / {levelInfo.xpNeededForNextLevel} XP</span>
+                      <span>{levelInfo.level < 20 ? `${levelInfo.xpToNextLevel} XP to next level` : 'Max Level'}</span>
                     </div>
                   </div>
                   

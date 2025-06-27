@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
 import type { NodeObject, LinkObject } from 'react-force-graph-2d';
 import { SKILL_TREE, BRANCH_COLORS, canUnlockSkill } from '@/lib/ailock/skills';
-import type { AilockSkill } from '@/lib/ailock/core';
+import type { AilockSkill } from '@/lib/ailock/shared';
 
 const ForceGraph2D = lazy(() => import('react-force-graph-2d'));
 

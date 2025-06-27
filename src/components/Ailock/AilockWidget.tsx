@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Star, Settings } from 'lucide-react';
 import AilockDashboard from './AilockDashboard';
 import { ailockApi } from '@/lib/ailock/api';
-import type { FullAilockProfile } from '@/lib/ailock/core';
+import type { FullAilockProfile } from '@/lib/ailock/shared';
+import { getLevelInfo } from '@/lib/ailock/shared';
 import { useUserSession } from '@/hooks/useUserSession';
 
 export default function AilockWidget() {
@@ -57,11 +58,7 @@ export default function AilockWidget() {
     );
   }
 
-  const xpForNextLevel = profile.level < 20 ? [100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950, 6750, 7600, 8500, 9450, 10450, 11500][profile.level - 1] || 11500 : 11500;
-  const currentLevelXp = profile.level > 1 ? [0, 100, 250, 450, 700, 1000, 1350, 1750, 2200, 2700, 3250, 3850, 4500, 5200, 5950, 6750, 7600, 8500, 9450, 10450][profile.level - 2] || 0 : 0;
-  const progressXp = profile.xp - currentLevelXp;
-  const requiredXp = xpForNextLevel - currentLevelXp;
-  const xpPercentage = Math.min((progressXp / requiredXp) * 100, 100);
+  const levelInfo = getLevelInfo(profile.xp);
 
   const getAvatarGradient = () => {
     if (profile.level >= 15) return 'from-purple-400 via-pink-400 to-yellow-400';
@@ -87,12 +84,12 @@ export default function AilockWidget() {
             </div>
             {/* Level badge */}
             <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-              {profile.level}
+              {levelInfo.level}
             </div>
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-white font-medium text-sm truncate">{profile.name}</h3>
-            <p className="text-white/60 text-xs">Level {profile.level}</p>
+            <p className="text-white/60 text-xs">Level {levelInfo.level}</p>
           </div>
           <button className="p-1 hover:bg-white/10 rounded transition-colors">
             <Settings className="w-4 h-4 text-white/60" />
@@ -103,12 +100,12 @@ export default function AilockWidget() {
         <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
             <span className="text-white/60">XP Progress</span>
-            <span className="text-white/60">{progressXp}/{requiredXp}</span>
+            <span className="text-white/60">{levelInfo.progressXp}/{levelInfo.xpNeededForNextLevel}</span>
           </div>
           <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
             <div 
               className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-500"
-              style={{ width: `${xpPercentage}%` }}
+              style={{ width: `${levelInfo.progressPercentage}%` }}
             ></div>
           </div>
         </div>

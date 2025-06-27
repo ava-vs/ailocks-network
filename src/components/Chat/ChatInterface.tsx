@@ -7,7 +7,7 @@ import { useLocation } from '../../hooks/useLocation';
 import MessageBubble from './MessageBubble';
 import IntentPreview from './IntentPreview';
 import { getProfile, gainXp } from '../../lib/ailock/api';
-import type { FullAilockProfile } from '../../lib/ailock/core';
+import type { FullAilockProfile } from '../../lib/ailock/shared';
 import LevelUpModal from '../Ailock/LevelUpModal';
 import { searchIntents } from '../../lib/api';
 import toast from 'react-hot-toast';
@@ -78,7 +78,17 @@ export default function ChatInterface() {
   const [demoUsersSeeded, setDemoUsersSeeded] = useState(false);
   const [ailockProfile, setAilockProfile] = useState<FullAilockProfile | null>(null);
   const [ailockId, setAilockId] = useState<string | null>(null);
-  const [levelUpInfo, setLevelUpInfo] = useState<{ newLevel: number, skillPointsGained: number, xpGained: number } | null>(null);
+  const [levelUpInfo, setLevelUpInfo] = useState<{ 
+    newLevel: number, 
+    skillPointsGained: number, 
+    xpGained: number,
+    newSkillUnlocked?: {
+      id: string;
+      name: string;
+      description: string;
+      branch: string;
+    } | null;
+  } | null>(null);
   const [isLevelUpModalOpen, setIsLevelUpModalOpen] = useState(false);
   const [newLevelInfo, setNewLevelInfo] = useState({ level: 0, xp: 0, skillPoints: 0 });
   const [showChatHistoryMessage, setShowChatHistoryMessage] = useState(false);
@@ -668,10 +678,22 @@ export default function ChatInterface() {
             setAilockProfile(prev => prev ? {...prev, xp: result.new_xp} : null);
 
             if (result.leveledUp) {
+                // Определяем, какой скилл разблокируется на новом уровне
+                let newSkillUnlocked = null;
+                if (result.newLevel === 2) {
+                    newSkillUnlocked = {
+                        id: 'semantic_search',
+                        name: 'Semantic Search',
+                          description: 'Improves relevance and accuracy of all searches by understanding context.',
+                          branch: 'research'
+                    };
+                }
+                
                 setLevelUpInfo({
                     newLevel: result.newLevel,
                     skillPointsGained: result.skillPointsGained,
-                    xpGained: result.xpGained
+                    xpGained: result.xpGained,
+                    newSkillUnlocked
                 });
                 setAilockProfile(prev => prev ? {...prev, level: result.newLevel, skillPoints: (prev.skillPoints || 0) + result.skillPointsGained} : null);
             }
@@ -976,6 +998,7 @@ export default function ChatInterface() {
           newLevel={levelUpInfo.newLevel}
           skillPointsGained={levelUpInfo.skillPointsGained}
           xpGained={levelUpInfo.xpGained}
+          newSkillUnlocked={levelUpInfo.newSkillUnlocked}
         />
       )}
     </div>

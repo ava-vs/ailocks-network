@@ -1,4 +1,4 @@
-import type { FullAilockProfile, XpEventType } from './core';
+import type { FullAilockProfile, XpEventType } from './shared';
 
 const API_BASE_URL = '/.netlify/functions';
 

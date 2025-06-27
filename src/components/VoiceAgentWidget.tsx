@@ -43,6 +43,8 @@ export default function VoiceAgentWidget() {
     onDisconnect: () => {
       console.log('❌ Voice agent disconnected');
       toast('🔴 Ailock Off!');
+      // Принудительно устанавливаем статус idle при отключении
+      window.dispatchEvent(new CustomEvent('voice-status-update', { detail: { status: 'idle' } }));
     },
     onMessage: (message: any) => {
       console.log('📨 Dispatching voice message to main chat:', message);
@@ -103,16 +105,26 @@ export default function VoiceAgentWidget() {
     const { status, isListening, isSpeaking } = conversation as any;
     let voiceState: 'idle' | 'listening' | 'processing' | 'speaking' = 'idle';
 
-    if (status === 'connecting' || status === 'disconnecting') {
+    // Сначала проверяем статус соединения
+    if (status === 'connecting') {
       voiceState = 'processing';
-    } else if (isListening) {
-      voiceState = 'listening';
-    } else if (isSpeaking) {
-      voiceState = 'speaking';
+    } else if (status === 'disconnecting') {
+      voiceState = 'processing';
+    } else if (status === 'disconnected' || status === 'error' || status === 'idle') {
+      // Если агент отключен или в ошибке, всегда idle
+      voiceState = 'idle';
     } else if (status === 'connected') {
-      voiceState = 'idle'; 
+      // Только если подключен, проверяем активность
+      if (isListening) {
+        voiceState = 'listening';
+      } else if (isSpeaking) {
+        voiceState = 'speaking';
+      } else {
+        voiceState = 'idle';
+      }
     }
 
+    console.log(`Voice status update: ${status}, listening: ${isListening}, speaking: ${isSpeaking} -> ${voiceState}`);
     window.dispatchEvent(new CustomEvent('voice-status-update', { detail: { status: voiceState } }));
   }, [(conversation as any).status, (conversation as any).isListening, (conversation as any).isSpeaking]);
 
@@ -121,7 +133,16 @@ export default function VoiceAgentWidget() {
     const currentStatus = String(conversation.status);
     if (currentStatus === 'connected') {
       console.log('⏹️ Stopping conversation...');
-      await conversation.endSession();
+      try {
+        await conversation.endSession();
+        console.log('✅ Conversation ended successfully');
+        // Принудительно отправляем событие об изменении статуса на idle
+        window.dispatchEvent(new CustomEvent('voice-status-update', { detail: { status: 'idle' } }));
+      } catch (err) {
+        console.error('❌ Error ending conversation:', err);
+        // Даже при ошибке устанавливаем статус idle
+        window.dispatchEvent(new CustomEvent('voice-status-update', { detail: { status: 'idle' } }));
+      }
     } else if (currentStatus === 'disconnected' || currentStatus === 'error' || currentStatus === 'idle') {
       console.log('🎤 Attempting to start conversation...');
       window.dispatchEvent(new CustomEvent('voice-session-started'));
@@ -134,6 +155,8 @@ export default function VoiceAgentWidget() {
         console.error('💥 Failed to start conversation:', err);
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         toast.error(`Failed to start: ${errorMessage}`);
+        // При ошибке также устанавливаем статус idle
+        window.dispatchEvent(new CustomEvent('voice-status-update', { detail: { status: 'idle' } }));
       }
     }
   }, [conversation]);

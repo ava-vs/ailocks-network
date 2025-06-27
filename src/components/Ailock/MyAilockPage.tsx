@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useUserSession } from '@/hooks/useUserSession';
 import { ailockApi } from '@/lib/ailock/api';
-import type { FullAilockProfile } from '@/lib/ailock/core';
+import type { FullAilockProfile } from '@/lib/ailock/shared';
 import AilockDashboard from './AilockDashboard';
 
 export default function MyAilockPage() {
