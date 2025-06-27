@@ -10,10 +10,15 @@ interface PricingPlan {
   name: string;
   price: number;
   period: string;
+  originalPrice?: string;
+  discount?: string;
   description: string;
   features: string[];
   highlighted?: boolean;
   popular?: boolean;
+  badge?: string | null;
+  buttonText: string;
+  buttonStyle: 'primary' | 'secondary' | 'premium';
   stripePriceId?: string;
   limits: {
     queries: number | 'unlimited';
@@ -30,6 +35,7 @@ export default function PricingPage() {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
 
   useEffect(() => {
     setIsHydrated(true);
@@ -38,8 +44,8 @@ export default function PricingPage() {
   const getTexts = () => {
     const texts = {
       en: {
-        title: 'Choose Your AI Collaboration Plan',
-        subtitle: 'Unlock the full potential of AI-powered networking and collaboration',
+        title: 'Choose Your Plan',
+        subtitle: 'Transform your AI collaboration experience',
         monthly: 'Monthly',
         yearly: 'Yearly',
         save: 'Save 20%',
@@ -54,46 +60,50 @@ export default function PricingPage() {
         contact: 'Contact Sales',
         freeTrial: '14-day free trial',
         noCommitment: 'No commitment, cancel anytime',
+        limitedOffer: '40% OFF first 3 months',
+        trustedBy: 'Trusted by 10,000+ professionals',
+        reviews: '4.9/5 from 500+ reviews',
         plans: {
           free: {
-            name: 'Free',
-            description: 'Perfect for getting started with AI collaboration',
+            name: 'Starter',
+            description: 'Perfect for getting started',
             features: [
-              '100 AI queries per month',
+              '50 AI queries per month',
               'Basic intent matching',
               'Standard chat interface',
               'Community support',
-              'Basic analytics'
-            ]
+              'Basic collaboration tools'
+            ],
+            buttonText: 'Start Free Today',
+            buttonStyle: 'secondary'
           },
           pro: {
-            name: 'Pro',
-            description: 'Advanced features for serious collaborators',
+            name: 'Professional',
+            description: 'Advanced features',
             features: [
-              '2,000 AI queries per month',
+              '1,500 AI queries per month',
               'Semantic search with embeddings',
-              'Smart chain decomposition',
-              'Voice Agent Interface (ElevenLabs)',
-              'Priority AI models (GPT-4, Claude)',
-              'Advanced analytics',
-              'Email support',
-              'Custom integrations'
-            ]
+              'Smart intent matching', 
+              'Voice Agent Interface',
+              'Priority support',
+              'Advanced analytics'
+            ],
+            buttonText: 'Try Pro for $6',
+            buttonStyle: 'primary'
           },
           enterprise: {
-            name: 'Premium',
-            description: 'Full-scale solution for organizations',
+            name: 'Enterprise',
+            description: 'Full-scale solution',
             features: [
               'Unlimited AI queries',
-              'All premium AI models',
+              'All premium AI models', 
               'Video Agent Interface (Talvus)',
-              'Better custom AI training',
-              'White-label solution',
-              'Dedicated account manager',
-              'SLA guarantee',
               'Custom integrations',
-              'Advanced security'
-            ]
+              'White-label solution',
+              'Dedicated support'
+            ],
+            buttonText: 'Get Enterprise Demo',
+            buttonStyle: 'premium'
           }
         },
         faqItems: [
@@ -116,80 +126,84 @@ export default function PricingPage() {
         ]
       },
       ru: {
-        title: 'Выберите план ИИ-сотрудничества',
-        subtitle: 'Раскройте весь потенциал сетевого взаимодействия и сотрудничества на основе ИИ',
+        title: 'Выберите план',
+        subtitle: 'Улучшите свой опыт работы с ИИ',
         monthly: 'Ежемесячно',
         yearly: 'Ежегодно',
         save: 'Скидка 20%',
-        popular: 'Самый популярный',
+        popular: 'Популярный',
         currentPlan: 'Текущий план',
-        upgrade: 'Обновить сейчас',
+        upgrade: 'Обновить',
         getStarted: 'Начать',
-        backToApp: 'Вернуться в приложение',
+        backToApp: 'Назад',
         features: 'Возможности',
         whatYouGet: 'Что вы получаете:',
-        faq: 'Часто задаваемые вопросы',
-        contact: 'Связаться с отделом продаж',
-        freeTrial: '14-дневная бесплатная пробная версия',
-        noCommitment: 'Без обязательств, отмена в любое время',
+        faq: 'Частые вопросы',
+        contact: 'Связаться',
+        freeTrial: '14-дневная пробная версия',
+        noCommitment: 'Без обязательств',
+        limitedOffer: 'Скидка 40% на первые 3 месяца',
+        trustedBy: 'Нам доверяют более 10,000 профессионалов',
+        reviews: '4.9/5 из более чем 500 отзывов',
         plans: {
           free: {
-            name: 'Бесплатный',
-            description: 'Идеально для начала работы с ИИ-сотрудничеством',
+            name: 'Базовый',
+            description: 'Для начала работы',
             features: [
-              '100 запросов к ИИ в месяц',
-              'Базовое сопоставление интентов',
-              'Стандартный чат-интерфейс',
+              '50 запросов к ИИ в месяц',
+              'Базовое сопоставление',
+              'Стандартный интерфейс',
               'Поддержка сообщества',
-              'Базовая аналитика'
-            ]
+              'Базовые инструменты'
+            ],
+            buttonText: 'Начать бесплатно',
+            buttonStyle: 'secondary'
           },
           pro: {
-            name: 'Про',
-            description: 'Расширенные функции для серьезных коллабораторов',
+            name: 'Профессиональный',
+            description: 'Расширенные функции',
             features: [
-              '2,000 запросов к ИИ в месяц',
-              'Семантический поиск с эмбеддингами',
-              'Умная декомпозиция цепочек',
-              'Голосовой интерфейс (ElevenLabs)',
-              'Приоритетные модели ИИ (GPT-4, Claude)',
-              'Расширенная аналитика',
-              'Поддержка по электронной почте',
-              'Пользовательские интеграции'
-            ]
+              '1,500 запросов к ИИ в месяц',
+              'Семантический поиск',
+              'Умное сопоставление', 
+              'Голосовой интерфейс',
+              'Приоритетная поддержка',
+              'Расширенная аналитика'
+            ],
+            buttonText: 'Попробовать за $6',
+            buttonStyle: 'primary'
           },
           enterprise: {
             name: 'Корпоративный',
-            description: 'Полномасштабное решение для организаций',
+            description: 'Полное решение',
             features: [
-              'Неограниченные запросы к ИИ',
-              'Все премиум модели ИИ',
-              'Видео-интерфейс агента (Talvus)',
-              'Пользовательское обучение ИИ',
+              'Неограниченные запросы',
+              'Все премиум модели',
+              'Видео-интерфейс',
+              'Интеграции',
               'White-label решение',
-              'Выделенный менеджер аккаунта',
-              'Гарантия SLA',
-              'Пользовательские интеграции',
-              'Расширенная безопасность'
-            ]
+              'Выделенная поддержка'
+            ],
+            buttonText: 'Получить демо',
+            buttonStyle: 'premium'
           }
         },
         faqItems: [
           {
-            question: 'Могу ли я изменить план в любое время?',
+            question: 'Могу ли я изменить план?',
             answer: 'Да, вы можете повысить или понизить свой план в любое время. Изменения вступают в силу немедленно.'
           },
           {
             question: 'Какие модели ИИ включены?',
-            answer: 'Бесплатный план использует оптимизированные по стоимости модели. Pro включает GPT-4, Claude и премиум модели. Enterprise получает доступ ко всем моделям, включая пользовательское обучение.'
+            answer: 'Бесплатный план использует оптимизированные модели. Pro включает GPT-4, Claude и премиум модели. Enterprise получает доступ ко всем моделям.'
           },
           {
             question: 'Есть ли бесплатная пробная версия?',
-            answer: 'Да! Планы Pro и Enterprise поставляются с 14-дневной бесплатной пробной версией. Кредитная карта не требуется для начала.'
+            answer: 'Да! Планы Pro и Enterprise поставляются с 14-дневной бесплатной пробной версией. Кредитная карта не требуется.'
           },
           {
             question: 'Как работает биллинг?',
-            answer: 'Вы платите ежемесячно или ежегодно в зависимости от вашего выбора. Годовые планы экономят 20%. Все платежи безопасны через Stripe.'
+            answer: 'Вы платите ежемесячно или ежегодно. Годовые планы экономят 20%. Все платежи безопасны через Stripe.'
           }
         ]
       }
@@ -199,16 +213,23 @@ export default function PricingPage() {
 
   const texts = getTexts();
 
-  const plans: PricingPlan[] = [
+  const getYearlyPrice = (monthlyPrice: number) => {
+    const yearlyPrice = monthlyPrice * 12 * 0.8; // 20% discount
+    return Math.floor(yearlyPrice / 12);
+  };
+
+  const pricingPlans: PricingPlan[] = [
     {
       id: 'free',
       name: texts.plans.free.name,
       price: 0,
-      period: texts.monthly,
+      period: billingPeriod === 'monthly' ? texts.monthly : texts.yearly,
       description: texts.plans.free.description,
       features: texts.plans.free.features,
+      buttonText: texts.plans.free.buttonText,
+      buttonStyle: 'secondary',
       limits: {
-        queries: 100,
+        queries: 50,
         aiModels: ['DeepSeek Free'],
         storage: '1GB',
         support: 'Community'
@@ -217,15 +238,20 @@ export default function PricingPage() {
     {
       id: 'pro',
       name: texts.plans.pro.name,
-      price: 29,
-      period: texts.monthly,
+      price: billingPeriod === 'monthly' ? 10 : getYearlyPrice(10),
+      period: billingPeriod === 'monthly' ? texts.monthly : texts.yearly,
+      originalPrice: billingPeriod === 'monthly' ? '$19' : '$15',
+      discount: billingPeriod === 'monthly' ? 'First 3 months: $6/month (40% OFF)' : 'First year: $8/month (40% OFF)',
       description: texts.plans.pro.description,
       features: texts.plans.pro.features,
+      badge: '⭐ ' + texts.popular,
+      buttonText: texts.plans.pro.buttonText,
+      buttonStyle: 'primary',
       highlighted: true,
       popular: true,
-      stripePriceId: 'price_pro_monthly',
+      stripePriceId: billingPeriod === 'monthly' ? 'price_pro_monthly' : 'price_pro_yearly',
       limits: {
-        queries: 2000,
+        queries: 1500,
         aiModels: ['GPT-4', 'Claude-3.5', 'DeepSeek'],
         storage: '50GB',
         support: 'Email'
@@ -234,11 +260,16 @@ export default function PricingPage() {
     {
       id: 'enterprise',
       name: texts.plans.enterprise.name,
-      price: 99,
-      period: texts.monthly,
+      price: billingPeriod === 'monthly' ? 39 : getYearlyPrice(39),
+      period: billingPeriod === 'monthly' ? texts.monthly : texts.yearly,
+      originalPrice: billingPeriod === 'monthly' ? '$65' : '$52',
+      discount: billingPeriod === 'monthly' ? 'First 3 months: $23/month (40% OFF)' : 'First year: $31/month (40% OFF)',
       description: texts.plans.enterprise.description,
       features: texts.plans.enterprise.features,
-      stripePriceId: 'price_enterprise_monthly',
+      badge: '🚀 Best Value',
+      buttonText: texts.plans.enterprise.buttonText,
+      buttonStyle: 'premium',
+      stripePriceId: billingPeriod === 'monthly' ? 'price_enterprise_monthly' : 'price_enterprise_yearly',
       limits: {
         queries: 'unlimited',
         aiModels: ['All Models', 'Custom Training'],
@@ -277,175 +308,195 @@ export default function PricingPage() {
     );
   }
 
+  const PricingCard = ({ plan }: { plan: PricingPlan }) => (
+    <div className={`pricing-card ${plan.highlighted ? 'border-blue-400/30' : ''} ${plan.badge ? 'featured' : ''}`}>
+      {/* Badge */}
+      {plan.badge && (
+        <div className="most-popular-badge">
+          {plan.badge}
+        </div>
+      )}
+      
+      {/* Header */}
+      <div className="card-header text-center mb-4">
+        <h3 className="text-lg font-semibold text-white mb-2">{plan.name}</h3>
+        
+        {/* Price */}
+        <div className="price-section">
+          {plan.originalPrice && (
+            <div className="original-price text-gray-400 line-through text-xs mb-1">
+              {plan.originalPrice}{plan.period}
+            </div>
+          )}
+          <div className="current-price text-2xl font-bold text-white">
+            ${plan.price}
+            <span className="text-sm text-gray-400 font-normal">{plan.period}</span>
+          </div>
+          {plan.discount && (
+            <div className="discount-offer text-green-400 text-xs mt-1 font-medium">
+              🔥 {plan.discount}
+            </div>
+          )}
+        </div>
+        
+        <p className="text-gray-300 text-xs mt-2">{plan.description}</p>
+      </div>
+      
+      {/* Features */}
+      <div className="features-list mb-4">
+        {plan.features.map((feature, index) => (
+          <div key={index} className="feature-item flex items-start gap-2 mb-1.5">
+            <Check className="w-3.5 h-3.5 text-green-400 flex-shrink-0 mt-0.5" />
+            <span className="text-gray-300 text-xs">{feature}</span>
+          </div>
+        ))}
+      </div>
+      
+      {/* CTA Button */}
+      <button
+        onClick={() => handleUpgrade(plan.id)}
+        disabled={isLoading && selectedPlan === plan.id}
+        className={`cta-button w-full py-2 px-4 rounded-lg font-medium text-sm transition-all ${
+          plan.buttonStyle === 'primary' 
+            ? 'bg-blue-500 hover:bg-blue-600 text-white transform hover:scale-105' 
+            : plan.buttonStyle === 'premium'
+            ? 'bg-purple-500 hover:bg-purple-600 text-white'
+            : 'bg-gray-700 hover:bg-gray-600 text-white'
+        }`}
+      >
+        {isLoading && selectedPlan === plan.id ? (
+          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto"></div>
+        ) : (
+          plan.buttonText
+        )}
+      </button>
+      
+      {/* Guarantee */}
+      <div className="guarantee text-center mt-2">
+        <span className="text-xs text-gray-400">
+          {plan.price === 0 ? 'No credit card required' : '30-day money-back guarantee'}
+        </span>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col">
       {/* Header */}
       <Header />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto main-content">
         {/* Hero Section */}
-        <div className="relative py-20 px-6">
-          <div className="max-w-7xl mx-auto text-center">
+        <div className="relative py-6 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-5xl mx-auto text-center">
             {/* Back Button */}
             <button
               onClick={goBackToApp}
-              className="inline-flex items-center space-x-2 text-white/70 hover:text-white transition-colors mb-8 group"
+              className="inline-flex items-center space-x-2 text-white/70 hover:text-white transition-colors mb-4 group"
             >
               <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
               <span>{texts.backToApp}</span>
             </button>
 
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-3 bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
               {texts.title}
             </h1>
-            <p className="text-xl text-white/80 mb-12 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-base text-white/80 mb-4 max-w-xl mx-auto">
               {texts.subtitle}
             </p>
 
-            {/* Pricing Cards */}
-            <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              {plans.map((plan) => (
-                <div
-                  key={plan.id}
-                  className={`relative rounded-2xl p-8 transition-all duration-300 hover:scale-105 ${
-                    plan.highlighted
-                      ? 'bg-gradient-to-br from-blue-500/20 to-indigo-600/20 border-2 border-blue-400/50 shadow-2xl shadow-blue-500/20'
-                      : 'bg-white/5 border border-white/10 hover:bg-white/10'
+            {/* Limited Time Offer */}
+            <div className="text-blue-400 text-sm font-medium mb-4">
+              🔥 {texts.limitedOffer}
+            </div>
+
+            {/* Billing Toggle */}
+            <div className="flex items-center justify-center mb-6">
+              <div className="bg-slate-800/80 p-1 rounded-lg inline-flex">
+                <button
+                  onClick={() => setBillingPeriod('monthly')}
+                  className={`px-3 py-1.5 text-xs rounded-md transition-all ${
+                    billingPeriod === 'monthly'
+                      ? 'bg-blue-500 text-white'
+                      : 'text-white/70 hover:text-white'
                   }`}
                 >
-                  {plan.popular && (
-                    <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                      <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-full text-sm font-medium flex items-center space-x-2">
-                        <Star className="w-4 h-4" />
-                        <span>{texts.popular}</span>
-                      </div>
-                    </div>
-                  )}
+                  {texts.monthly}
+                </button>
+                <button
+                  onClick={() => setBillingPeriod('yearly')}
+                  className={`px-3 py-1.5 text-xs rounded-md transition-all flex items-center gap-1 ${
+                    billingPeriod === 'yearly'
+                      ? 'bg-blue-500 text-white'
+                      : 'text-white/70 hover:text-white'
+                  }`}
+                >
+                  {texts.yearly}
+                  <span className="bg-green-500 text-white text-xs px-1 py-0.5 rounded text-[10px]">
+                    {texts.save}
+                  </span>
+                </button>
+              </div>
+            </div>
 
-                  <div className="text-center mb-8">
-                    <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
-                    <div className="mb-4">
-                      <span className="text-4xl font-bold text-white">${plan.price}</span>
-                      <span className="text-white/60 ml-2">/{plan.period}</span>
-                    </div>
-                    <p className="text-white/70 text-sm">{plan.description}</p>
-                  </div>
-
-                  {/* Features */}
-                  <div className="space-y-4 mb-8">
-                    {plan.features.map((feature, index) => (
-                      <div key={index} className="flex items-start space-x-3">
-                        <Check className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                        <span className="text-white/80 text-sm">{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Limits */}
-                  <div className="border-t border-white/10 pt-6 mb-8">
-                    <div className="space-y-3 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-white/60">Queries/month:</span>
-                        <span className="text-white font-medium">
-                          {typeof plan.limits.queries === 'number' 
-                            ? plan.limits.queries.toLocaleString() 
-                            : plan.limits.queries}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-white/60">AI Models:</span>
-                        <span className="text-white font-medium">{plan.limits.aiModels.join(', ')}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-white/60">Storage:</span>
-                        <span className="text-white font-medium">{plan.limits.storage}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-white/60">Support:</span>
-                        <span className="text-white font-medium">{plan.limits.support}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* CTA Button */}
-                  <button
-                    onClick={() => handleUpgrade(plan.id)}
-                    disabled={isLoading && selectedPlan === plan.id}
-                    className={`w-full py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center space-x-2 ${
-                      plan.highlighted
-                        ? 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl'
-                        : plan.id === 'free'
-                        ? 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
-                        : 'bg-white/5 hover:bg-white/10 text-white border border-white/10 hover:border-white/20'
-                    }`}
-                  >
-                    {isLoading && selectedPlan === plan.id ? (
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        {plan.id === 'free' ? (
-                          <span>{texts.currentPlan}</span>
-                        ) : (
-                          <>
-                            <Crown className="w-5 h-5" />
-                            <span>{plan.id === 'pro' ? texts.upgrade : texts.getStarted}</span>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </button>
-
-                  {plan.id !== 'free' && (
-                    <p className="text-center text-white/50 text-xs mt-3">
-                      {texts.freeTrial} • {texts.noCommitment}
-                    </p>
-                  )}
-                </div>
+            {/* Pricing Cards */}
+            <div className="pricing-container">
+              {pricingPlans.map((plan) => (
+                <PricingCard key={plan.id} plan={plan} />
               ))}
+            </div>
+
+            {/* Social Proof */}
+            <div className="text-center mt-8">
+              <p className="text-gray-400 mb-1 text-xs">{texts.trustedBy}</p>
+              <div className="flex justify-center items-center gap-1">
+                <span className="text-yellow-400 text-xs">⭐⭐⭐⭐⭐</span>
+                <span className="text-gray-300 text-xs">{texts.reviews}</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Features Section */}
-        <div className="py-20 px-6 bg-white/5">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl font-bold text-white text-center mb-12">{texts.whatYouGet}</h2>
-            <div className="grid md:grid-cols-3 gap-8">
+        <div className="py-8 px-4 sm:px-6 lg:px-8 bg-white/5">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-xl font-bold text-white text-center mb-6">{texts.whatYouGet}</h2>
+            <div className="grid md:grid-cols-3 gap-4">
               <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <Brain className="w-8 h-8 text-white" />
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Brain className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-4">Advanced AI Models</h3>
-                <p className="text-white/70">Access to GPT-4, Claude, and other premium AI models for superior collaboration insights.</p>
+                <h3 className="text-base font-semibold text-white mb-1">Advanced AI Models</h3>
+                <p className="text-white/70 text-xs">Access to GPT-4, Claude, and other premium AI models for superior collaboration insights.</p>
               </div>
               <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <Database className="w-8 h-8 text-white" />
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Database className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-4">Semantic Search</h3>
-                <p className="text-white/70">Vector-powered search that understands context and meaning, not just keywords.</p>
+                <h3 className="text-base font-semibold text-white mb-1">Semantic Search</h3>
+                <p className="text-white/70 text-xs">Vector-powered search that understands context and meaning, not just keywords.</p>
               </div>
               <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <Sparkles className="w-8 h-8 text-white" />
+                <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Sparkles className="w-5 h-5 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-4">Smart Chains</h3>
-                <p className="text-white/70">AI-powered project decomposition that breaks complex tasks into manageable steps.</p>
+                <h3 className="text-base font-semibold text-white mb-1">Smart Chains</h3>
+                <p className="text-white/70 text-xs">AI-powered project decomposition that breaks complex tasks into manageable steps.</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* FAQ Section */}
-        <div className="py-20 px-6">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold text-white text-center mb-12">{texts.faq}</h2>
-            <div className="space-y-6">
+        <div className="py-8 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl mx-auto">
+            <h2 className="text-xl font-bold text-white text-center mb-4">{texts.faq}</h2>
+            <div className="space-y-3">
               {texts.faqItems.map((item, index) => (
-                <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
-                  <h3 className="text-lg font-semibold text-white mb-3">{item.question}</h3>
-                  <p className="text-white/70">{item.answer}</p>
+                <div key={index} className="bg-white/5 rounded-lg p-3 border border-white/10">
+                  <h3 className="text-sm font-semibold text-white mb-1">{item.question}</h3>
+                  <p className="text-white/70 text-xs">{item.answer}</p>
                 </div>
               ))}
             </div>
@@ -464,11 +515,11 @@ export default function PricingPage() {
             onClick={() => setShowModal(false)}
           />
           <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl w-full max-w-md">
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <h3 className="text-lg font-semibold text-white flex items-center space-x-2">
-                  <Crown className="w-5 h-5 text-blue-400" />
-                  <span>Upgrade to {plans.find(p => p.id === selectedPlan)?.name}</span>
+            <div className="bg-slate-800/95 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl w-full max-w-md">
+              <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <h3 className="text-base font-semibold text-white flex items-center space-x-2">
+                  <Crown className="w-4 h-4 text-blue-400" />
+                  <span>Upgrade to {pricingPlans.find(p => p.id === selectedPlan)?.name}</span>
                 </h3>
                 <button
                   onClick={() => setShowModal(false)}
@@ -478,21 +529,21 @@ export default function PricingPage() {
                 </button>
               </div>
               
-              <div className="p-6">
-                <div className="text-center mb-6">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <Zap className="w-8 h-8 text-white" />
+              <div className="p-4">
+                <div className="text-center mb-4">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mx-auto mb-2">
+                    <Zap className="w-5 h-5 text-white" />
                   </div>
-                  <h4 className="text-xl font-semibold text-white mb-2">Stripe Integration Required</h4>
-                  <p className="text-white/70 text-sm">
+                  <h4 className="text-base font-semibold text-white mb-1">Stripe Integration Required</h4>
+                  <p className="text-white/70 text-xs">
                     To complete your upgrade, please configure your Stripe integration with your API keys.
                   </p>
                 </div>
                 
-                <div className="space-y-4">
-                  <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-4">
-                    <h5 className="font-medium text-blue-400 mb-2">Next Steps:</h5>
-                    <ol className="text-sm text-white/80 space-y-1">
+                <div className="space-y-3">
+                  <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-3">
+                    <h5 className="font-medium text-blue-400 text-xs mb-1">Next Steps:</h5>
+                    <ol className="text-xs text-white/80 space-y-1">
                       <li>1. Set up your Stripe account</li>
                       <li>2. Configure API keys in environment</li>
                       <li>3. Create product pricing in Stripe</li>
@@ -503,7 +554,7 @@ export default function PricingPage() {
                   <div className="flex space-x-3">
                     <button
                       onClick={() => setShowModal(false)}
-                      className="flex-1 px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white rounded-lg transition-all"
+                      className="flex-1 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white rounded-lg transition-all text-xs"
                     >
                       Close
                     </button>
@@ -511,7 +562,7 @@ export default function PricingPage() {
                       href="https://bolt.new/setup/stripe"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg transition-all text-center font-medium"
+                      className="flex-1 px-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg transition-all text-center font-medium text-xs"
                     >
                       Setup Stripe
                     </a>

@@ -145,6 +145,129 @@
   .notification-pulse {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
+  
+  /* Chat input container */
+  .chat-input-container {
+    height: 150px;
+    background: rgba(51, 65, 85, 0.6);
+    border: 1px solid rgba(74, 158, 255, 0.3);
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+    transition: border-color 0.3s ease;
+  }
+
+  .chat-input-container:focus-within {
+    border-color: rgba(74, 158, 255, 0.6);
+    box-shadow: 0 0 0 1px rgba(74, 158, 255, 0.2);
+  }
+
+  .chat-textarea {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: white;
+    font-size: 16px;
+    placeholder-color: rgba(156, 163, 175, 0.8);
+    resize: none;
+    height: 120px;
+    padding: 12px;
+  }
+
+  .chat-textarea::placeholder {
+    color: rgba(156, 163, 175, 0.8);
+  }
+  
+  /* Status bar */
+  .status-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100vw;
+    height: 48px;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1000;
+  }
+
+  /* Main content */
+  .main-content {
+    min-height: calc(100vh - 60px); /* Header height */
+    padding-bottom: 48px; /* Status bar height */
+  }
+
+  /* Bottom panel */
+  .bottom-panel {
+    position: fixed !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  
+  /* Hide the collapsed intents window at bottom */
+  .collapsed-intents-bottom {
+    display: none !important;
+  }
+
+  /* Remove any bottom floating intents panel */
+  .intents-collapsed-panel {
+    display: none !important;
+  }
+  
+  /* Main pricing container */
+  .pricing-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    justify-content: center;
+  }
+
+  /* Ensure cards don't get too wide */
+  .pricing-card {
+    max-width: 280px;
+    width: 100%;
+    background: rgba(51, 65, 85, 0.6);
+    border: 1px solid rgba(74, 158, 255, 0.2);
+    border-radius: 16px;
+    padding: 16px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    position: relative;
+    margin: 0 auto;
+  }
+
+  .pricing-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(74, 158, 255, 0.4);
+    box-shadow: 0 10px 40px rgba(74, 158, 255, 0.1);
+  }
+
+  /* Most Popular badge */
+  .most-popular-badge {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  
+  /* Featured card */
+  .featured {
+    order: -1; /* Show most popular first on mobile */
+  }
 }
 
 @keyframes slideInUp {
@@ -204,32 +327,77 @@
   background: rgba(74, 158, 255, 0.7);
 }
 
-/* Mobile optimizations */
+/* Responsive design for pricing cards */
+@media (max-width: 1200px) {
+  .pricing-container {
+    max-width: 800px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 10px;
+  }
+  
+  .pricing-card {
+    max-width: 260px;
+    padding: 14px;
+  }
+}
+
+@media (max-width: 900px) {
+  .pricing-container {
+    max-width: 700px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  
+  .pricing-card {
+    max-width: 220px;
+    padding: 12px;
+  }
+  
+  .feature-item {
+    margin-bottom: 4px;
+  }
+  
+  .current-price {
+    font-size: 1.75rem;
+  }
+}
+
 @media (max-width: 768px) {
-  .mobile-safe-area {
-    padding-bottom: env(safe-area-inset-bottom);
+  .pricing-container {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    max-width: 600px;
+    gap: 16px;
   }
-
-  /* Touch targets */
-  button, [role="button"] {
-    min-height: 44px;
-    min-width: 44px;
+  
+  .pricing-card {
+    max-width: 100%;
   }
+}
 
-  /* Improved mobile typography */
-  h1 {
-    font-size: 1.5rem;
-    line-height: 1.2;
+@media (max-width: 640px) {
+  .pricing-container {
+    grid-template-columns: 1fr;
+    max-width: 320px;
+    gap: 16px;
   }
-
-  h2 {
-    font-size: 1.25rem;
-    line-height: 1.3;
+  
+  .pricing-card {
+    max-width: 100%;
   }
+}
 
-  p {
-    font-size: 0.875rem;
-    line-height: 1.5;
+@media (max-width: 480px) {
+  .pricing-container {
+    padding: 8px;
+  }
+  
+  .pricing-card {
+    padding: 14px;
+  }
+  
+  .current-price {
+    font-size: 2rem;
   }
 }
 
@@ -305,136 +473,63 @@ button, input, [role="button"] {
   }
 }
 
-/* CRITICAL FIX 1: Bottom Status Bar - Full Screen Layout */
-.status-bar {
-  position: fixed !important;
-  bottom: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  width: 100vw !important;
-  height: 48px !important;
-  background: rgba(15, 23, 42, 0.95) !important;
-  backdrop-filter: blur(20px) !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-  z-index: 1000 !important;
-  margin: 0 !important;
-  padding: 0 16px !important;
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .mobile-safe-area {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Touch targets */
+  button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Improved mobile typography */
+  h1 {
+    font-size: 1.5rem;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+
+  p {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
 }
 
-/* Ensure main content extends to bottom */
-.main-content {
-  min-height: calc(100vh - 60px) !important; /* Header height */
-  padding-bottom: 48px !important; /* Status bar height */
-}
-
-/* Remove floating behavior, make it stick to bottom */
-.bottom-panel {
-  position: fixed !important;
-  bottom: 0 !important;
-  width: 100% !important;
-  margin: 0 !important;
-}
-
-/* CRITICAL FIX 2: Ailock Widget - Remove Image Border */
-.ailock-widget img,
-.ailock-avatar img,
-.ailock-character img {
+/* Ailock widget image fixes */
+.ailock-widget img {
   border: none !important;
   outline: none !important;
   box-shadow: none !important;
 }
 
-/* CRITICAL FIX 3: Menu Icons - Light Gradients */
+/* Left sidebar icons with gradient */
 .sidebar-icon {
-  background: linear-gradient(135deg, #E4F0FE 0%, #2A8ED7 100%) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  background-clip: text !important;
-  font-size: 20px !important;
-  transition: all 0.3s ease !important;
+  background: linear-gradient(135deg, #E4F0FE 0%, #2A8ED7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 20px;
+  transition: all 0.3s ease;
 }
 
 .sidebar-icon:hover {
-  background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  transform: scale(1.1) !important;
+  background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  transform: scale(1.1);
 }
 
+/* Right sidebar icons with gradient */
 .right-sidebar-icon {
-  background: linear-gradient(135deg, #E4F0FE 0%, #2A8ED7 100%) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
-  background-clip: text !important;
-}
-
-/* CRITICAL FIX 4: Chat Input - 150px Height */
-.chat-input-container {
-  height: 150px !important;
-  min-height: 150px !important;
-  padding: 16px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-  background: rgba(51, 65, 85, 0.6) !important;
-  border: 1px solid rgba(74, 158, 255, 0.3) !important;
-  border-radius: 16px !important;
-  backdrop-filter: blur(10px) !important;
-  transition: border-color 0.3s ease !important;
-}
-
-.chat-input-container:focus-within {
-  border-color: rgba(74, 158, 255, 0.6) !important;
-  box-shadow: 0 0 0 1px rgba(74, 158, 255, 0.2) !important;
-}
-
-.chat-textarea {
-  flex: 1 !important;
-  height: 120px !important;
-  min-height: 120px !important;
-  resize: none !important;
-  background: transparent !important;
-  border: none !important;
-  outline: none !important;
-  color: white !important;
-  font-size: 16px !important;
-  line-height: 1.5 !important;
-  padding: 12px !important;
-}
-
-.chat-textarea::placeholder {
-  color: rgba(156, 163, 175, 0.8) !important;
-}
-
-/* CRITICAL FIX 5: Voice Activation Animations */
-.voice-listening-wave-1 {
-  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
-.voice-listening-wave-2 {
-  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-  animation-delay: 0.2s;
-}
-
-.voice-listening-wave-3 {
-  animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-  animation-delay: 0.4s;
-}
-
-.voice-processing {
-  animation: spin 1s linear infinite;
-}
-
-.voice-speaking {
-  animation: bounce 1s infinite;
-}
-
-/* CRITICAL FIX: Hide collapsed intents window at bottom */
-.collapsed-intents-bottom {
-  display: none !important;
-}
-
-/* Remove any bottom floating intents panel */
-.intents-collapsed-panel {
-  display: none !important;
+  background: linear-gradient(135deg, #E4F0FE 0%, #2A8ED7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
