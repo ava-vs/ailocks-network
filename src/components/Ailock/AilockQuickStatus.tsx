@@ -30,7 +30,7 @@ export default function AilockQuickStatus({ isOpen, onClose, profile, onOpenFull
 
   // Daily tasks simulation
   const dailyTasks = [
-    { id: 1, text: 'Analyze market trends', completed: false, xp: 50 },
+    { id: 1, text: 'Create intent', completed: false, xp: 30 },
     { id: 2, text: 'Process user queries', completed: false, xp: 100 },
     { id: 3, text: 'Generate insights', completed: false, xp: 75 }
   ];
