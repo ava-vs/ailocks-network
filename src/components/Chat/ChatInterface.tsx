@@ -11,6 +11,7 @@ import type { FullAilockProfile } from '../../lib/ailock/shared';
 import LevelUpModal from '../Ailock/LevelUpModal';
 import { searchIntents } from '../../lib/api';
 import toast from 'react-hot-toast';
+import IntentDetailModal from './IntentDetailModal';
 
 interface Message {
   id: string;
@@ -93,6 +94,7 @@ export default function ChatInterface() {
   const [newLevelInfo, setNewLevelInfo] = useState({ level: 0, xp: 0, skillPoints: 0 });
   const [showChatHistoryMessage, setShowChatHistoryMessage] = useState(false);
   const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
+  const [selectedIntent, setSelectedIntent] = useState<IntentCard | null>(null);
   
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomOfMessagesRef = useRef<HTMLDivElement>(null);
@@ -572,6 +574,15 @@ export default function ChatInterface() {
     setIntentPreview(null);
   };
 
+  const handleStartWork = (intent: IntentCard) => {
+    window.dispatchEvent(new CustomEvent('intent-in-work', { detail: intent }));
+    toast.success(`Intent "${intent.title.substring(0, 20)}..." moved to "In Work"`);
+  };
+
+  const handleViewDetails = (intent: IntentCard) => {
+    setSelectedIntent(intent);
+  };
+
   const handleIntentCardClick = (intent: IntentCard) => {
     console.log('Intent card clicked:', intent);
     const message = `Tell me more about "${intent.title}" - this looks interesting!`;
@@ -877,32 +888,24 @@ export default function ChatInterface() {
                         {message.intents.map((intent: IntentCard) => (
                           <div 
                             key={intent.id}
-                            onClick={() => handleIntentCardClick(intent)}
-                            className="bg-gradient-to-br from-blue-500/10 to-indigo-600/10 border border-blue-500/30 rounded-xl p-4 cursor-pointer hover:from-blue-500/20 hover:to-indigo-600/20 transition-all shadow-lg hover:shadow-xl"
+                            className="bg-gradient-to-br from-blue-500/10 to-indigo-600/10 border border-blue-500/30 rounded-xl p-4 shadow-lg transition-all"
                           >
                             <div className="flex items-start justify-between mb-3">
-                              <h4 className="text-white font-medium text-sm flex-1">
+                              <h4 className="text-white font-medium text-sm flex-1 pr-4">
                                 {intent.title}
                               </h4>
-                              <div className="flex items-center space-x-2 ml-2">
-                                {intent.matchScore && (
-                                  <div className="flex items-center space-x-1 bg-blue-500/20 text-blue-400 px-2 py-1 rounded-lg border border-blue-500/30">
-                                    <span className="text-xs font-medium">{intent.matchScore}% match</span>
-                                  </div>
-                                )}
-                                {intent.priority === 'urgent' && (
-                                  <div className={`flex items-center space-x-1 px-2 py-1 rounded-lg border text-xs ${getPriorityColor(intent.priority)}`}>
-                                    <span className="font-medium">Urgent</span>
-                                  </div>
-                                )}
+                              <div className="flex items-center space-x-2 ml-2 flex-shrink-0">
+                                <div className="flex items-center space-x-1 bg-blue-500/20 text-blue-400 px-2 py-1 rounded-lg border border-blue-500/30">
+                                  <span className="text-xs font-medium">{intent.matchScore}% match</span>
+                                </div>
                               </div>
                             </div>
                             
-                            <p className="text-white/60 text-xs leading-relaxed mb-3">
-                              {intent.description}
+                            <p className="text-white/60 text-xs leading-relaxed mb-4">
+                              {intent.description.substring(0, 150)}{intent.description.length > 150 && '...'}
                             </p>
                             
-                            <div className="flex flex-wrap gap-1 mb-3">
+                            <div className="flex flex-wrap gap-2 mb-4">
                               {intent.requiredSkills.slice(0, 3).map((skill) => (
                                 <span 
                                   key={skill}
@@ -919,17 +922,18 @@ export default function ChatInterface() {
                             </div>
                             
                             <div className="flex items-center justify-between text-xs">
-                              {intent.distance && (
-                                <div className="flex items-center space-x-2 text-white/50">
-                                  <MapPin className="w-3 h-3" />
-                                  <span>{intent.distance}</span>
-                                </div>
-                              )}
-                              {intent.budget && (
-                                <span className="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded border border-emerald-500/30">
-                                  {intent.budget}
-                                </span>
-                              )}
+                              <div className="flex items-center space-x-2 text-white/50">
+                                <MapPin className="w-3 h-3" />
+                                <span>{intent.distance}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button onClick={() => handleViewDetails(intent)} className="p-1.5 text-gray-300 hover:text-white hover:bg-slate-700/50 rounded-md transition-colors">
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                                <button onClick={() => handleStartWork(intent)} className="p-1.5 text-gray-300 hover:text-white hover:bg-slate-700/50 rounded-md transition-colors">
+                                  <Plus className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -994,7 +998,7 @@ export default function ChatInterface() {
                 <button
                   title="Create Intent"
                   onClick={handleCreateIntentClick}
-                  className="flex h-11 items-center justify-center rounded-lg bg-blue-400 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex h-8 items-center justify-center rounded-lg bg-blue-400 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span>Create Intent</span>
                 </button>
@@ -1007,10 +1011,10 @@ export default function ChatInterface() {
                 <button 
                   onClick={sendMessage}
                   disabled={!input.trim() || isStreaming || !sessionId}
-                  className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-400 text-white transition-colors hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-400 text-white transition-colors hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Send message"
                 >
-                  <Send className="w-6 h-6 text-white" />
+                  <Send className="w-4 h-4 text-white" />
                 </button>
               </div>
             </div>
@@ -1028,6 +1032,13 @@ export default function ChatInterface() {
           newSkillUnlocked={levelUpInfo.newSkillUnlocked}
         />
       )}
+
+      <IntentDetailModal 
+        isOpen={!!selectedIntent}
+        onClose={() => setSelectedIntent(null)}
+        intent={selectedIntent}
+        onStartWork={handleStartWork}
+      />
     </div>
   );
 };

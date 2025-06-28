@@ -7,8 +7,8 @@ export const searchIntents = async (query: string) => {
     
     const params = new URLSearchParams({
       search: query,
-      userCountry: userLocation.country || 'US',
-      userCity: userLocation.city || 'New York',
+      userCountry: userLocation.country || 'BR',
+      userCity: userLocation.city || 'Rio de Janeiro',
       limit: '10'
     });
     

@@ -12,9 +12,9 @@ interface UserLocation {
 
 export function useLocation() {
   const [location, setLocation] = useState<UserLocation>({
-    country: 'US',
-    city: 'New York',
-    timezone: 'America/New_York',
+    country: 'BR',
+    city: ' Rio de Janeiro',
+    timezone: 'America/Sao_Paulo',
     isDefault: true
   });
 
@@ -32,9 +32,9 @@ export function useLocation() {
         if (response.ok) {
           const geoData = await response.json();
           setLocation({
-            country: geoData.country || 'US',
-            city: geoData.city || 'New York',
-            timezone: geoData.timezone || 'America/New_York',
+            country: geoData.country || 'BR',
+            city: geoData.city || 'Rio de Janeiro',
+            timezone: geoData.timezone || 'America/Sao_Paulo',
             region: geoData.region,
             latitude: geoData.latitude,
             longitude: geoData.longitude,
@@ -45,7 +45,7 @@ export function useLocation() {
           await detectFromBrowser();
         }
       } catch (error) {
-        console.log('Using default location (US):', error);
+        console.log('Using default location (BR):', error);
         await detectFromBrowser();
       }
     };
@@ -65,8 +65,8 @@ export function useLocation() {
                 if (response.ok) {
                   const data = await response.json();
                   setLocation({
-                    country: data.countryCode || 'US',
-                    city: data.city || data.locality || 'New York',
+                    country: data.countryCode || 'BR',
+                    city: data.city || data.locality || 'Rio de Janeiro',
                     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,

@@ -411,8 +411,8 @@ async function searchRelevantIntents(userMessage: string, location: any, userInt
   try {
     // Build query parameters for intent search
     const searchQuery = encodeURIComponent(userMessage);
-    const userCountry = location?.country || 'US';
-    const userCity = location?.city || 'New York';
+    const userCountry = location?.country || 'BR';
+    const userCity = location?.city || 'Rio de Janeiro';
     
     // Construct the URL for internal API call
     const baseUrl = process.env.URL || 'http://localhost:8888';

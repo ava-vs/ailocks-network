@@ -17,8 +17,8 @@ export const handler: Handler = async (event) => {
 
   try {
     const { searchParams } = new URL(event.rawUrl);
-    const country = searchParams.get('country') || 'US';
-    const city = searchParams.get('city') || 'New York';
+    const country = searchParams.get('country') || 'BR';
+    const city = searchParams.get('city') || 'Rio de Janeiro';
     const skills = searchParams.get('skills')?.split(',') || [];
     const category = searchParams.get('category');
     const limit = parseInt(searchParams.get('limit') || '10');

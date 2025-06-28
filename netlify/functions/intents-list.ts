@@ -18,8 +18,8 @@ export const handler: Handler = async (event) => {
 
   try {
     const { searchParams } = new URL(event.rawUrl);
-    const userCountry = searchParams.get('userCountry') || 'US';
-    const userCity = searchParams.get('userCity') || 'New York';
+    const userCountry = searchParams.get('userCountry') || 'BR';
+    const userCity = searchParams.get('userCity') || 'Rio de Janeiro';
     const category = searchParams.get('category');
     const limit = parseInt(searchParams.get('limit') || '10');
     const userId = searchParams.get('userId'); // Get current user ID for ownership check

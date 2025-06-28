@@ -26,8 +26,7 @@ export default function UserHeaderInfo() {
   if (!isHydrated) {
     return <div className="h-10 w-64 bg-white/5 animate-pulse rounded-lg"></div>;
   }
-
-  // Определяем роль пользователя на основе его профиля
+  
   const getUserRole = () => {
     if (isLirea) return 'Designer';
     if (isMarco) return 'Manager'; 

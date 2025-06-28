@@ -54,7 +54,7 @@ The migrations will be automatically applied during the build process.
 
 3. **Verify Intents API:**
    ```bash
-   curl "https://ailocks.netlify.app/.netlify/functions/intents-list?userCountry=US&userCity=New York"
+   curl "https://ailocks.netlify.app/.netlify/functions/intents-list?userCountry=BR&userCity=Rio%20de%20Janeiro"
    ```
 
 ## Step 5: Verify Integration
