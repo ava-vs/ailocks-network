@@ -13,7 +13,7 @@ interface UserLocation {
 export function useLocation() {
   const [location, setLocation] = useState<UserLocation>({
     country: 'BR',
-    city: ' Rio de Janeiro',
+    city: 'Rio de Janeiro',
     timezone: 'America/Sao_Paulo',
     isDefault: true
   });
