@@ -67,7 +67,7 @@ export default function CollapsibleSidebar({ children, side }: CollapsibleSideba
   const isExpanded = side === 'right' ? isRightPanelExpanded : isHoverExpanded;
   
   const sidebarClasses = cn(
-    'fixed top-[60px] h-[calc(100vh-60px)] z-40 transition-all duration-300 ease-in-out',
+    'fixed top-[60px] h-[calc(100vh-76px)] z-40 transition-all duration-300 ease-in-out',
     'bg-[rgba(26,31,46,0.9)] backdrop-blur-[20px]',
     side === 'left' ? 'left-0 border-r border-white/10' : 'right-0 border-l border-white/10',
     side === 'right' 

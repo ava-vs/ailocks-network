@@ -127,7 +127,7 @@ export default function AilockQuickStatus({ isOpen, onClose, profile, onOpenFull
 
           {/* Action Buttons */}
           <div className="flex space-x-3">
-            <button 
+            <button
               onClick={onClose}
               className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
             >
@@ -138,7 +138,7 @@ export default function AilockQuickStatus({ isOpen, onClose, profile, onOpenFull
                 onClose();
                 onOpenFullProfile();
               }}
-              className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg transition-all"
+              className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl font-medium"
             >
               Full Profile
             </button>

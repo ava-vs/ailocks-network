@@ -268,6 +268,23 @@
   .featured {
     order: -1; /* Show most popular first on mobile */
   }
+
+  /* Border gradient for buttons */
+  .border-gradient-cyan-blue {
+    border-width: 1px;
+    border-style: solid;
+    border-image: linear-gradient(to right, #38bdf8, #3b82f6) 1;
+  }
+
+  /* Subtle glow effect for buttons */
+  .glow-subtle {
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+    transition: box-shadow 0.3s ease;
+  }
+  
+  .glow-subtle:hover {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+  }
 }
 
 @keyframes slideInUp {
