@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useUserSession } from '@/hooks/useUserSession';
 import { ailockApi } from '@/lib/ailock/api';
 import type { FullAilockProfile } from '@/lib/ailock/shared';

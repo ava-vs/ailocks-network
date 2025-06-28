@@ -490,6 +490,24 @@ export default function ChatInterface() {
     }
   };
 
+  const handleCreateIntentClick = () => {
+    // Create a basic intent preview from the last user message or a template
+    const previewData: IntentPreviewData = {
+      title: lastUserMessage.length > 5 
+        ? lastUserMessage.substring(0, Math.min(50, lastUserMessage.length)) 
+        : "New Collaboration Opportunity",
+      description: lastUserMessage.length > 5 
+        ? lastUserMessage 
+        : "Looking for collaboration on an exciting project.",
+      category: "Technology",
+      requiredSkills: ["Collaboration", "Communication"],
+      priority: "medium"
+    };
+    
+    setIntentPreview(previewData);
+    setShowIntentPreview(true);
+  };
+
   const handleCreateIntent = async () => {
     if (!sessionId || !intentPreview) return;
     
@@ -784,24 +802,6 @@ export default function ChatInterface() {
     };
   }, []); 
 
-  const handleCreateIntentClick = () => {
-    // Create a basic intent preview from the last user message or a template
-    const previewData: IntentPreviewData = {
-      title: lastUserMessage.length > 5 
-        ? lastUserMessage.substring(0, Math.min(50, lastUserMessage.length)) 
-        : "New Collaboration Opportunity",
-      description: lastUserMessage.length > 5 
-        ? lastUserMessage 
-        : "Looking for collaboration on an exciting project.",
-      category: "Technology",
-      requiredSkills: ["Collaboration", "Communication"],
-      priority: "medium"
-    };
-    
-    setIntentPreview(previewData);
-    setShowIntentPreview(true);
-  };
-
   return (
     <div className="h-full flex bg-slate-900/90 text-white">
       {/* Left Panel: Avatar */}
@@ -976,15 +976,15 @@ export default function ChatInterface() {
         {/* Unified Input Area */}
         <div className="px-6 pb-4 pt-2 bg-gradient-to-t from-slate-800/90 via-slate-800/90 to-transparent">
           <div className="relative max-w-5xl mx-auto">
-            <div className="chat-input-container relative">
+            <div className="relative">
               <textarea
                 ref={inputRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={getPlaceholder()}
-                className="chat-textarea w-full px-6 py-6 pr-36 bg-slate-800/60 border border-blue-500/30 
-                          rounded-2xl backdrop-blur text-white placeholder-gray-400 text-lg
+                className="w-full px-6 py-6 pr-36 bg-transparent border border-blue-500/30 
+                          rounded-2xl text-white placeholder-gray-400 text-lg
                           focus:outline-none focus:border-blue-500 focus:bg-slate-800/80 resize-none transition-all duration-300"
                 disabled={isStreaming || !sessionId}
               />
@@ -992,14 +992,11 @@ export default function ChatInterface() {
               {/* INPUT ACTIONS */}
               <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
                 <button 
-                  className="px-3 py-2 border border-transparent bg-transparent text-white hover:text-white rounded-md transition-all duration-200 hover:bg-blue-500/20 hover:border-blue-500/30"
+                  className="px-3 py-2 border border-gradient-cyan-blue rounded-md transition-all duration-200 glow-subtle flex items-center gap-1"
                   title="Create Intent"
                   onClick={handleCreateIntentClick}
                 >
-                  <div className="flex items-center gap-1">
-                    <Plus className="w-4 h-4" />
-                    <span className="text-sm">Create Intent</span>
-                  </div>
+                  <span className="text-sm">Create Intent</span>
                 </button>
                 <button 
                   className="p-3 hover:bg-slate-700/50 rounded-lg transition-colors"
