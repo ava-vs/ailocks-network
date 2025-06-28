@@ -388,31 +388,29 @@ export default function PricingPage() {
       {/* Main Content */}
       <div className="flex-1 overflow-y-auto main-content">
         {/* Hero Section */}
-        <div className="relative py-6 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-5xl mx-auto text-center">
+        <div className="relative py-2 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-5xl mx-auto">
             {/* Back Button */}
             <button
               onClick={goBackToApp}
-              className="inline-flex items-center space-x-2 text-white/70 hover:text-white transition-colors mb-4 group"
+              className="inline-flex items-center space-x-2 text-white/70 hover:text-white transition-colors mb-2 group text-sm py-1 px-2"
             >
               <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
               <span>{texts.backToApp}</span>
             </button>
 
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-3 bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
-              {texts.title}
-            </h1>
-            <p className="text-base text-white/80 mb-4 max-w-xl mx-auto">
-              {texts.subtitle}
-            </p>
-
-            {/* Limited Time Offer */}
-            <div className="text-blue-400 text-sm font-medium mb-4">
-              🔥 {texts.limitedOffer}
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-white mb-1 bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+                {texts.title}
+              </h2>
+              <p className="text-base text-white/80 mb-2 max-w-xl mx-auto">
+                {texts.subtitle}
+              </p>
             </div>
 
-            {/* Billing Toggle */}
-            <div className="flex items-center justify-center mb-6">
+            {/* Pricing Options Row */}
+            <div className="flex flex-wrap justify-between items-center mb-2">
+              {/* Billing Toggle */}
               <div className="bg-slate-800/80 p-1 rounded-lg inline-flex">
                 <button
                   onClick={() => setBillingPeriod('monthly')}
@@ -438,6 +436,11 @@ export default function PricingPage() {
                   </span>
                 </button>
               </div>
+
+              {/* Limited Time Offer */}
+              <div className="text-blue-400 text-sm font-medium">
+                🔥 {texts.limitedOffer}
+              </div>
             </div>
 
             {/* Pricing Cards */}
@@ -448,7 +451,7 @@ export default function PricingPage() {
             </div>
 
             {/* Social Proof */}
-            <div className="text-center mt-8">
+            <div className="text-center mt-4">
               <p className="text-gray-400 mb-1 text-xs">{texts.trustedBy}</p>
               <div className="flex justify-center items-center gap-1">
                 <span className="text-yellow-400 text-xs">⭐⭐⭐⭐⭐</span>

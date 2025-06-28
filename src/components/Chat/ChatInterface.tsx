@@ -589,11 +589,11 @@ export default function ChatInterface() {
       ru: {
         researcher: 'Я превосходно нахожу возможности для сотрудничества и анализирую рыночные данные.',
         creator: 'Я помогаю находить творческих соавторов и воплощать инновационные идеи в жизнь.',
-        analyst: 'Я предоставляю стратегический анализ возможностей и рыночные инсайты.'
+        analyst: 'Я анализирую возможности и предоставляю инсайты.'
       }
     };
 
-    return descriptions[language]?.[mode] || descriptions.en.researcher;
+    return descriptions[language as keyof typeof descriptions]?.[mode as keyof typeof descriptions.en] || descriptions.en.researcher;
   };
 
   const getWelcomeText = () => {
@@ -992,7 +992,7 @@ export default function ChatInterface() {
               {/* INPUT ACTIONS */}
               <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
                 <button 
-                  className="px-2 py-1.5 border border-gradient-cyan-blue rounded-md transition-all duration-200 glow-subtle text-sm tracking-tight"
+                  className="px-2 py-1.5 border !rounded-md transition-all duration-200 text-sm tracking-tight create-intent-button"
                   title="Create Intent"
                   onClick={handleCreateIntentClick}
                 >
