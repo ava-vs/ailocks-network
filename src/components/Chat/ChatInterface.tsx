@@ -985,18 +985,18 @@ export default function ChatInterface() {
                 placeholder={getPlaceholder()}
                 className="w-full px-6 py-6 pr-36 bg-transparent border border-blue-500/30 
                           rounded-2xl text-white placeholder-gray-400 text-lg
-                          focus:outline-none focus:border-blue-500 focus:bg-slate-800/80 resize-none transition-all duration-300"
+                           focus:outline-none focus:border-blue-500 focus:bg-slate-800/80 resize-none transition-all duration-300"
                 disabled={isStreaming || !sessionId}
               />
 
               {/* INPUT ACTIONS */}
               <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
                 <button 
-                  className="px-3 py-2 border border-gradient-cyan-blue rounded-md transition-all duration-200 glow-subtle flex items-center gap-1"
+                  className="px-2 py-1.5 border border-gradient-cyan-blue rounded-md transition-all duration-200 glow-subtle text-sm tracking-tight"
                   title="Create Intent"
                   onClick={handleCreateIntentClick}
                 >
-                  <span className="text-sm">Create Intent</span>
+                  <span>Create Intent</span>
                 </button>
                 <button 
                   className="p-3 hover:bg-slate-700/50 rounded-lg transition-colors"

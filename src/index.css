@@ -146,37 +146,6 @@
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
   
-  /* Chat input container */
-  .chat-input-container {
-    height: 150px;
-    background: rgba(51, 65, 85, 0.6);
-    border: 1px solid rgba(74, 158, 255, 0.3);
-    border-radius: 16px;
-    backdrop-filter: blur(10px);
-    transition: border-color 0.3s ease;
-  }
-
-  .chat-input-container:focus-within {
-    border-color: rgba(74, 158, 255, 0.6);
-    box-shadow: 0 0 0 1px rgba(74, 158, 255, 0.2);
-  }
-
-  .chat-textarea {
-    background: transparent;
-    border: none;
-    outline: none;
-    color: white;
-    font-size: 16px;
-    placeholder-color: rgba(156, 163, 175, 0.8);
-    resize: none;
-    height: 120px;
-    padding: 12px;
-  }
-
-  .chat-textarea::placeholder {
-    color: rgba(156, 163, 175, 0.8);
-  }
-  
   /* Status bar */
   .status-bar {
     position: fixed;
