@@ -983,7 +983,7 @@ export default function ChatInterface() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={getPlaceholder()}
-                className="w-full px-6 py-6 pr-36 bg-transparent border border-blue-500/30 
+                className="w-full px-6 py-6 pr-44 bg-transparent border border-blue-500/30 
                           rounded-2xl text-white placeholder-gray-400 text-lg
                            focus:outline-none focus:border-blue-500 focus:bg-slate-800/80 resize-none transition-all duration-300"
                 disabled={isStreaming || !sessionId}
@@ -991,23 +991,23 @@ export default function ChatInterface() {
 
               {/* INPUT ACTIONS */}
               <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
-                <button 
-                  className="px-2 py-1.5 border !rounded-md transition-all duration-200 text-sm tracking-tight create-intent-button"
+                <button
                   title="Create Intent"
                   onClick={handleCreateIntentClick}
+                  className="px-2 py-1.5 rounded-lg text-sm tracking-tight font-medium text-white bg-transparent border border-blue-500/80 shadow-[0_0_5px_rgba(59,130,246,0.5)] hover:shadow-[0_0_10px_rgba(59,130,246,0.7)] hover:-translate-y-px active:translate-y-0 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-blue-400"
                 >
                   <span>Create Intent</span>
                 </button>
-                <button 
+                {/* <button 
                   className="p-3 hover:bg-slate-700/50 rounded-lg transition-colors"
                   title="Attach file"
                 >
                   <Paperclip className="w-6 h-6 text-gray-400" />
-                </button>
+                </button> */}
                 <button 
                   onClick={sendMessage}
                   disabled={!input.trim() || isStreaming || !sessionId}
-                  className="p-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-blue-400"
                   title="Send message"
                 >
                   <Send className="w-6 h-6 text-white" />
