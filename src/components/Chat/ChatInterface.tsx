@@ -994,7 +994,7 @@ export default function ChatInterface() {
                 <button
                   title="Create Intent"
                   onClick={handleCreateIntentClick}
-                  className="px-2 py-1.5 rounded-lg text-sm tracking-tight font-medium text-white bg-transparent border border-blue-500/80 shadow-[0_0_5px_rgba(59,130,246,0.5)] hover:shadow-[0_0_10px_rgba(59,130,246,0.7)] hover:-translate-y-px active:translate-y-0 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-blue-400"
+                  className="flex h-11 items-center justify-center rounded-lg bg-blue-400 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span>Create Intent</span>
                 </button>
@@ -1007,7 +1007,7 @@ export default function ChatInterface() {
                 <button 
                   onClick={sendMessage}
                   disabled={!input.trim() || isStreaming || !sessionId}
-                  className="p-3 bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-blue-400"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-400 text-white transition-colors hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Send message"
                 >
                   <Send className="w-6 h-6 text-white" />
