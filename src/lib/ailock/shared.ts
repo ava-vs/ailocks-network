@@ -139,4 +139,25 @@ export function getLevelInfo(currentXp: number) {
     xpToNextLevel: Math.max(0, xpNeededForNextLevel - progressXp),
     progressPercentage: xpNeededForNextLevel > 0 ? Math.min((progressXp / xpNeededForNextLevel) * 100, 100) : 100
   };
-} 
+}
+
+// Get skill effect based on skill ID and level
+export function getSkillEffect(skillId: string, level: number): string {
+  // This function would normally be in skills.ts, but we're adding it here
+  // to avoid circular dependencies and make it available to both client and server
+  const skillEffects: Record<string, Record<number, string>> = {
+    semantic_search: {
+      1: "Basic keyword and category matching.",
+      2: "Enabled semantic understanding for deeper context.",
+      3: "AI predicts search intent for hyper-relevant results."
+    },
+    deep_research: {
+      1: "Analyzes up to 3 external sources for reports.",
+      2: "Cross-references up to 10 sources and identifies patterns.",
+      3: "Generates detailed reports with cited sources and novel insights."
+    },
+    // Add other skills as needed
+  };
+
+  return skillEffects[skillId]?.[level] || "No effect at this level.";
+}
