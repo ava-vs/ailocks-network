@@ -644,7 +644,7 @@ export default function ChatInterface() {
       }
     };
 
-    const modeResponses = responses[language]?.[mode] || responses.en.researcher;
+    const modeResponses = responses[language as keyof typeof responses]?.[mode as keyof typeof responses.en] || responses.en.researcher;
     const randomResponse = modeResponses[Math.floor(Math.random() * modeResponses.length)];
     
     return `${randomResponse}\n\n*Note: Using offline mode - Ailock services may be temporarily unavailable.*`;
@@ -877,7 +877,6 @@ export default function ChatInterface() {
                         {message.intents.map((intent: IntentCard) => (
                           <div 
                             key={intent.id}
-                            onClick={() => handleIntentCardClick(intent)}
                             className="bg-gradient-to-br from-blue-500/10 to-indigo-600/10 border border-blue-500/30 rounded-xl p-4 cursor-pointer hover:from-blue-500/20 hover:to-indigo-600/20 transition-all shadow-lg hover:shadow-xl"
                           >
                             <div className="flex items-start justify-between mb-3">
@@ -930,6 +929,39 @@ export default function ChatInterface() {
                                   {intent.budget}
                                 </span>
                               )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
+                              <button 
+                                className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-md text-xs font-medium border border-blue-500/30 hover:bg-blue-500/30 transition-colors"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleIntentCardClick(intent);
+                                }}
+                              >
+                                In Work
+                              </button>
+                              <div className="flex space-x-2">
+                                <button 
+                                  className="px-3 py-1 bg-green-500/20 text-green-400 rounded-md text-xs font-medium border border-green-500/30 hover:bg-green-500/30 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toast.success("Intent marked as active");
+                                  }}
+                                >
+                                  Active
+                                </button>
+                                <button 
+                                  className="px-3 py-1 bg-red-500/20 text-red-400 rounded-md text-xs font-medium border border-red-500/30 hover:bg-red-500/30 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toast.error("Intent deleted");
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </div>
                           </div>
                         ))}
