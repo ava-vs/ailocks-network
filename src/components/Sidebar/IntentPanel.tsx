@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, MapPin, Briefcase, ChevronDown, ChevronUp, BrainCircuit, Bot, HardDrive, Zap, Rss, Clock, CheckCircle, XCircle, LayoutGrid, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, MapPin, Briefcase, ChevronDown, ChevronUp, BrainCircuit, Bot, HardDrive, Zap, Rss, Clock, CheckCircle, XCircle, LayoutGrid, Menu, ChevronLeft, ChevronRight, User, Trash2 } from 'lucide-react';
 import AilockWidget from '../Ailock/AilockWidget';
 import toast from 'react-hot-toast';
 import { useUserSession } from '../../hooks/useUserSession';
+import { deleteIntent } from '../../lib/api';
 
 interface Intent {
   id: string;
@@ -26,17 +27,19 @@ interface IntentPanelProps {
   setIsRightPanelExpanded?: (expanded: boolean) => void;
 }
 
-type Tab = 'nearby' | 'in-work';
+type Tab = 'nearby' | 'in-work' | 'my-intents';
 
 export default function IntentPanel({ isExpanded = false, setIsRightPanelExpanded }: IntentPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>('nearby');
   const [intents, setIntents] = useState<Intent[]>([]);
   const [inWorkIntents, setInWorkIntents] = useState<Intent[]>([]);
+  const [myIntents, setMyIntents] = useState<Intent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
   const [dbStatus, setDbStatus] = useState<'connected' | 'error' | 'checking'>('checking');
   const { currentUser, isHydrated } = useUserSession();
   const [notificationCount, setNotificationCount] = useState(0);
+  const [deletingIntentId, setDeletingIntentId] = useState<string | null>(null);
 
   const checkDbStatus = async () => {
     try {
@@ -59,7 +62,15 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
   const handleIntentCreated = (event: CustomEvent) => {
     const newIntent = event.detail;
     console.log('New intent captured by IntentPanel:', newIntent);
-    setIntents(prev => [newIntent, ...prev]);
+    
+    // Add to my intents if it's created by current user
+    if (newIntent.isOwn || newIntent.userId === currentUser.id) {
+      setMyIntents(prev => [newIntent, ...prev]);
+      setActiveTab('my-intents'); // Switch to My Intents tab
+    } else {
+      setIntents(prev => [newIntent, ...prev]);
+    }
+    
     toast.success('New intent added to the list!');
   };
 
@@ -99,11 +110,68 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
     }
   }, [inWorkIntents]);
 
+  const handleDeleteIntent = async (intentId: string, intentTitle: string) => {
+    if (!currentUser?.id) {
+      toast.error('User not identified. Cannot delete.');
+      return;
+    }
+    if (!confirm(`Are you sure you want to delete intent "${intentTitle}"?`)) {
+      return;
+    }
+
+    setDeletingIntentId(intentId);
+    
+    try {
+      await deleteIntent(intentId, currentUser.id);
+      
+      // Remove from my intents
+      setMyIntents(prev => prev.filter(intent => intent.id !== intentId));
+      
+      // Also remove from other tabs if present
+      setIntents(prev => prev.filter(intent => intent.id !== intentId));
+      setInWorkIntents(prev => prev.filter(intent => intent.id !== intentId));
+      
+      toast.success('Intent successfully deleted');
+    } catch (error) {
+      console.error('Failed to delete intent:', error);
+      toast.error('Error deleting intent');
+    } finally {
+      setDeletingIntentId(null);
+    }
+  };
+
   const handleUserChanged = () => {
     console.log('User changed, refetching intents...');
     setSearchQuery(null);
     setInWorkIntents([]); // Clear in-work intents for new user
+    setMyIntents([]); // Clear my intents for new user
     fetchIntents();
+    fetchMyIntents();
+  };
+
+  const fetchMyIntents = async () => {
+    if (!currentUser.id || currentUser.id === 'loading') return;
+    
+    const isDbConnected = await checkDbStatus();
+    if (!isDbConnected) {
+      console.log('Using mock data for my intents because DB is not connected.');
+      // setMyIntents(getMockMyIntents());
+      return;
+    }
+
+    try {
+      const response = await fetch(`/.netlify/functions/intents-list?userId=${currentUser.id}&myIntents=true`);
+      if (response.ok) {
+        const data = await response.json();
+        setMyIntents(data);
+      } else {
+        console.error('Failed to fetch my intents, using mock data');
+        // setMyIntents(getMockMyIntents());
+      }
+    } catch (error) {
+      console.error('Error fetching my intents:', error);
+      // setMyIntents(getMockMyIntents());
+    }
   };
 
   useEffect(() => {
@@ -188,6 +256,25 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
     }
   ];
 
+  const getMockMyIntents = (): Intent[] => [
+    {
+      id: 'my-mock-1',
+      userId: currentUser.id,
+      title: 'Looking for React developer for startup project',
+      description: 'Need an experienced React developer to help build our new startup platform...',
+      category: 'Technology',
+      requiredSkills: ['React', 'Node.js', 'MongoDB'],
+      budget: '$30,000',
+      timeline: '4 months',
+      priority: 'high',
+      matchScore: 100,
+      distance: 'Remote',
+      createdAt: new Date(Date.now() - 7200000).toISOString(),
+      userName: currentUser.name,
+      isOwn: true
+    }
+  ];
+
   if (!isExpanded) {
     return (
       <div className="relative h-full flex flex-col items-center bg-slate-900/80 backdrop-blur-sm text-white border-l border-slate-700/50">
@@ -229,7 +316,7 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
       <div className="flex-1 flex space-x-1">
         <button
           onClick={() => setActiveTab('nearby')}
-          className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+          className={`px-3 py-2 text-sm font-medium rounded-t-lg transition-colors ${
             activeTab === 'nearby'
               ? 'bg-slate-700/50 text-white'
               : 'text-slate-400 hover:text-white'
@@ -242,7 +329,7 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
         </button>
         <button
           onClick={() => setActiveTab('in-work')}
-          className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+          className={`px-3 py-2 text-sm font-medium rounded-t-lg transition-colors ${
             activeTab === 'in-work'
               ? 'bg-slate-700/50 text-white'
               : 'text-slate-400 hover:text-white'
@@ -258,9 +345,32 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
             )}
           </div>
         </button>
+        <button
+          onClick={() => setActiveTab('my-intents')}
+          className={`px-3 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+            activeTab === 'my-intents'
+              ? 'bg-slate-700/50 text-white'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <User className="w-4 h-4" />
+            <span>My Intents</span>
+            {myIntents.length > 0 && (
+              <span className="bg-green-500/50 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                {myIntents.length}
+              </span>
+            )}
+          </div>
+        </button>
       </div>
       <div className="flex items-center">
-        <button onClick={() => fetchIntents(searchQuery || '')} title="Refresh" className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors">
+        <button onClick={() => {
+          fetchIntents(searchQuery || '');
+          if (activeTab === 'my-intents') {
+            fetchMyIntents();
+          }
+        }} title="Refresh" className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors">
           <Zap className="w-4 h-4" />
         </button>
         <button onClick={() => setIsRightPanelExpanded?.(false)} title="Collapse" className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors">
@@ -270,14 +380,30 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
     </div>
   );
 
-  const IntentCard = ({ intent }: { intent: Intent }) => (
+  const IntentCard = ({ intent, showDeleteButton = false }: { intent: Intent; showDeleteButton?: boolean }) => (
     <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg p-3.5 mb-3 hover:border-slate-600/80 transition-colors duration-200">
       <div className="flex justify-between items-start mb-2">
         <h4 className="text-sm font-semibold text-white/90 leading-tight flex-1 pr-2">
           {intent.title}
         </h4>
-        <div className="flex items-center space-x-1 bg-blue-500/20 text-blue-400 px-2 py-1 rounded-md text-xs font-bold border border-blue-500/30">
-          <span>{intent.matchScore}%</span>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center space-x-1 bg-blue-500/20 text-blue-400 px-2 py-1 rounded-md text-xs font-bold border border-blue-500/30">
+            <span>{intent.matchScore}%</span>
+          </div>
+          {showDeleteButton && (
+            <button
+              onClick={() => handleDeleteIntent(intent.id, intent.title)}
+              disabled={deletingIntentId === intent.id}
+              className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-md transition-colors disabled:opacity-50"
+              title="Удалить интент"
+            >
+              {deletingIntentId === intent.id ? (
+                <div className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Trash2 className="w-3 h-3" />
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -327,13 +453,19 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
   const EmptyState = ({tab}: {tab: Tab}) => (
     <div className="text-center py-10 px-4">
       <div className="w-12 h-12 bg-slate-800 border border-slate-700 rounded-full mx-auto flex items-center justify-center mb-4">
-        {tab === 'nearby' ? <Search className="w-6 h-6 text-slate-500" /> : <Briefcase className="w-6 h-6 text-slate-500" />}
+        {tab === 'nearby' && <Search className="w-6 h-6 text-slate-500" />}
+        {tab === 'in-work' && <Briefcase className="w-6 h-6 text-slate-500" />}
+        {tab === 'my-intents' && <User className="w-6 h-6 text-slate-500" />}
       </div>
       <h4 className="font-semibold text-white">
-        {tab === 'nearby' ? 'No Local Intents' : 'No Intents In Work'}
+        {tab === 'nearby' && 'No Local Intents'}
+        {tab === 'in-work' && 'No Intents In Work'}
+        {tab === 'my-intents' && 'No My Intents'}
       </h4>
       <p className="text-sm text-slate-400 mt-1">
-        {tab === 'nearby' ? 'Try a broader search in the chat.' : 'Start work on an intent to see it here.'}
+        {tab === 'nearby' && 'Try a broader search in the chat.'}
+        {tab === 'in-work' && 'Start work on an intent to see it here.'}
+        {tab === 'my-intents' && 'Create your first intent in the chat.'}
       </p>
     </div>
   );
@@ -365,7 +497,7 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
       </div>
 
       <div className="flex-1 overflow-y-auto px-4">
-        {searchQuery && (
+        {searchQuery && activeTab === 'nearby' && (
           <p className="text-sm text-slate-400 mb-3 px-1">
             Results for: <span className="text-white font-medium">"{searchQuery}"</span>
           </p>
@@ -380,6 +512,9 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
             )}
             {activeTab === 'in-work' && (
               inWorkIntents.length > 0 ? inWorkIntents.map(intent => <IntentCard key={intent.id} intent={intent} />) : <EmptyState tab="in-work" />
+            )}
+            {activeTab === 'my-intents' && (
+              myIntents.length > 0 ? myIntents.map(intent => <IntentCard key={intent.id} intent={intent} showDeleteButton={true} />) : <EmptyState tab="my-intents" />
             )}
           </div>
         )}

@@ -24,8 +24,9 @@ export const handler: Handler = async (event) => {
     const limit = parseInt(searchParams.get('limit') || '10');
     const userId = searchParams.get('userId'); // Get current user ID for ownership check
     const searchQuery = searchParams.get('search'); // Semantic search query
+    const myIntents = searchParams.get('myIntents') === 'true'; // Filter for user's own intents
 
-    console.log(`🔍 Fetching intents for ${userCity}, ${userCountry} with search: "${searchQuery || 'none'}"`);
+    console.log(`🔍 Fetching intents for ${userCity}, ${userCountry} with search: "${searchQuery || 'none'}", myIntents: ${myIntents}`);
 
     // If a search query is provided, perform a hybrid search
     if (searchQuery) {
@@ -152,13 +153,22 @@ export const handler: Handler = async (event) => {
     }
 
     // Regular database search (fallback or when no search query)
-    const baseConditions = [
-      or(
-        eq(intents.targetCountry, userCountry),
-        isNull(intents.targetCountry)
-      ),
+    const baseConditions: any[] = [
       eq(intents.status, 'active')
     ];
+
+    // If filtering for user's own intents, add user filter
+    if (myIntents && userId) {
+      baseConditions.push(eq(intents.userId, userId));
+    } else {
+      // Only apply location filter if not filtering by user's own intents
+      baseConditions.push(
+        or(
+          eq(intents.targetCountry, userCountry),
+          isNull(intents.targetCountry)
+        )
+      );
+    }
 
     // Add category filter if specified
     if (category && category !== 'all') {

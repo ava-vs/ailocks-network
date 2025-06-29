@@ -1,5 +1,6 @@
+import React, { useEffect, useState } from 'react';
+import { Target, X, MapPin, DollarSign, Clock, Check, Edit3, Globe } from 'lucide-react';
 import { useStore } from '@nanostores/react';
-import { Target, Clock, DollarSign, X, Check, MapPin } from 'lucide-react';
 import { currentLanguage } from '../../lib/store';
 
 interface IntentPreviewProps {
@@ -11,7 +12,7 @@ interface IntentPreviewProps {
   budget?: string;
   timeline?: string;
   priority: string;
-  onConfirm: () => void;
+  onConfirm: (updatedData: any) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -31,173 +32,330 @@ export default function IntentPreview({
 }: IntentPreviewProps) {
   const language = useStore(currentLanguage);
 
-  const getTexts = () => {
-    const texts = {
-      en: {
-        preview: 'Create Intent Preview',
-        title: 'Title',
-        description: 'Description',
-        category: 'Category',
-        location: 'Location',
-        skills: 'Required Skills',
-        budget: 'Budget',
-        timeline: 'Timeline',
-        priority: 'Priority',
-        create: 'Create Intent',
-        creating: 'Creating...',
-        cancel: 'Cancel',
-        review: 'Review the details below and click "Create Intent" to publish your collaboration opportunity.'
-      },
-      ru: {
-        preview: 'Предварительный просмотр интента',
-        title: 'Заголовок',
-        description: 'Описание',
-        category: 'Категория',
-        location: 'Местоположение',
-        skills: 'Требуемые навыки',
-        budget: 'Бюджет',
-        timeline: 'Временные рамки',
-        priority: 'Приоритет',
-        create: 'Создать интент',
-        creating: 'Создание...',
-        cancel: 'Отмена',
-        review: 'Просмотрите детали ниже и нажмите "Создать интент", чтобы опубликовать возможность сотрудничества.'
+  // Editable state
+  const [editableTitle, setEditableTitle] = useState(title);
+  const [editableDescription, setEditableDescription] = useState(description);
+  const [editableCategory, setEditableCategory] = useState(category);
+  const [editableSkills, setEditableSkills] = useState(requiredSkills);
+  const [editableCity, setEditableCity] = useState('Rio de Janeiro'); // Default to Rio for the example
+  const [editableCountry, setEditableCountry] = useState('BR');
+  const [editableBudget, setEditableBudget] = useState(budget || '');
+  const [editableTimeline, setEditableTimeline] = useState(timeline || '');
+  const [editablePriority, setEditablePriority] = useState(priority);
+
+  // Handle escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel();
       }
     };
-    return texts[language as keyof typeof texts] || texts.en;
+    
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onCancel]);
+
+  const getTexts = () => {
+    const texts: Record<string, any> = {
+      en: {
+        title: 'Create Intent Preview',
+        subtitle: 'Review and edit the details below, then click "Create Intent" to publish your collaboration opportunity.',
+        titleLabel: 'Title',
+        categoryLabel: 'Category',
+        descriptionLabel: 'Description',
+        locationLabel: 'Location',
+        priorityLabel: 'Priority',
+        skillsLabel: 'Required Skills',
+        budgetLabel: 'Budget (Optional)',
+        timelineLabel: 'Timeline (Optional)',
+        createButton: 'Create Intent',
+        cancelButton: 'Cancel',
+        cityPlaceholder: 'City',
+        countryPlaceholder: 'Country',
+        budgetPlaceholder: 'e.g., $1000-5000',
+        timelinePlaceholder: 'e.g., 2-4 weeks'
+      },
+      ru: {
+        title: 'Предпросмотр Интента',
+        subtitle: 'Проверьте и отредактируйте детали ниже, затем нажмите "Создать Интент" чтобы опубликовать возможность для сотрудничества.',
+        titleLabel: 'Заголовок',
+        categoryLabel: 'Категория',
+        descriptionLabel: 'Описание',
+        locationLabel: 'Локация',
+        priorityLabel: 'Приоритет',
+        skillsLabel: 'Необходимые навыки',
+        budgetLabel: 'Бюджет (Опционально)',
+        timelineLabel: 'Временные рамки (Опционально)',
+        createButton: 'Создать Интент',
+        cancelButton: 'Отмена',
+        cityPlaceholder: 'Город',
+        countryPlaceholder: 'Страна',
+        budgetPlaceholder: 'например, $1000-5000',
+        timelinePlaceholder: 'например, 2-4 недели'
+      }
+    };
+    return texts[language] || texts.en;
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent': return 'text-red-400 bg-red-500/20 border-red-500/30';
+      case 'high': return 'text-orange-400 bg-orange-500/20 border-orange-500/30';
+      case 'medium': return 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30';
+      case 'low': return 'text-green-400 bg-green-500/20 border-green-500/30';
+      default: return 'text-gray-400 bg-gray-500/20 border-gray-500/30';
+    }
+  };
+
+  const parseBudget = (budgetStr: string): number | null => {
+    if (!budgetStr) return null;
+    // Extracts the first number from a string like "$1000-5000" or "1000"
+    const match = budgetStr.match(/\d+/);
+    return match ? parseInt(match[0], 10) : null;
+  };
+
+  const handleConfirm = () => {
+    const updatedData = {
+      title: editableTitle,
+      description: editableDescription,
+      category: editableCategory,
+      requiredSkills: editableSkills,
+      location: { city: editableCity, country: editableCountry },
+      budget: parseBudget(editableBudget),
+      timeline: editableTimeline,
+      priority: editablePriority
+    };
+    onConfirm(updatedData);
+  };
+
+  const addSkill = (skill: string) => {
+    if (skill.trim() && !editableSkills.includes(skill.trim())) {
+      setEditableSkills([...editableSkills, skill.trim()]);
+    }
+  };
+
+  const removeSkill = (skillToRemove: string) => {
+    setEditableSkills(editableSkills.filter(skill => skill !== skillToRemove));
   };
 
   const texts = getTexts();
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-800 border-red-200';
-      case 'high': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 mb-4 shadow-lg">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
-            <Target className="w-5 h-5 text-white" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900">{texts.preview}</h3>
-        </div>
-        <button
-          onClick={onCancel}
-          disabled={isLoading}
-          className="p-2 hover:bg-white/50 rounded-lg transition-colors"
-        >
-          <X className="w-4 h-4 text-gray-500" />
-        </button>
-      </div>
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
       
-      <p className="text-sm text-gray-600 mb-6">{texts.review}</p>
-      
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">{texts.title}</label>
-            <p className="text-gray-900 font-medium bg-white p-3 rounded-lg border">{title}</p>
-          </div>
-          
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">{texts.category}</label>
-            <p className="text-gray-900 bg-white p-3 rounded-lg border">{category}</p>
-          </div>
-        </div>
-        
-        <div>
-          <label className="text-sm font-medium text-gray-700 block mb-1">{texts.description}</label>
-          <p className="text-gray-600 bg-white p-3 rounded-lg border leading-relaxed">{description}</p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">{texts.location}</label>
-            <div className="flex items-center gap-2 bg-white p-3 rounded-lg border">
-              <MapPin className="w-4 h-4 text-blue-500" />
-              <span className="text-gray-900">{location.city}, {location.country}</span>
-            </div>
-          </div>
-          
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-1">{texts.priority}</label>
-            <div className={`inline-flex items-center px-3 py-2 rounded-lg border text-sm font-medium ${getPriorityColor(priority)}`}>
-              {priority.charAt(0).toUpperCase() + priority.slice(1)}
-            </div>
-          </div>
-        </div>
-        
-        {requiredSkills.length > 0 && (
-          <div>
-            <label className="text-sm font-medium text-gray-700 block mb-2">{texts.skills}</label>
-            <div className="flex flex-wrap gap-2">
-              {requiredSkills.map((skill, index) => (
-                <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-lg border border-blue-200 font-medium">
-                  {skill}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        {(budget || timeline) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {budget && (
-              <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">{texts.budget}</label>
-                <div className="flex items-center gap-2 bg-white p-3 rounded-lg border">
-                  <DollarSign className="w-4 h-4 text-green-500" />
-                  <span className="text-gray-900">{budget}</span>
+      {/* Modal */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="bg-slate-800/95 backdrop-blur-xl border border-white/20 rounded-2xl p-6 shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-600 p-0.5">
+                <div className="w-full h-full rounded-xl bg-slate-800/90 flex items-center justify-center">
+                  <Target className="w-5 h-5 text-blue-400" />
                 </div>
               </div>
-            )}
-            
-            {timeline && (
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-1">{texts.timeline}</label>
-                <div className="flex items-center gap-2 bg-white p-3 rounded-lg border">
-                  <Clock className="w-4 h-4 text-purple-500" />
-                  <span className="text-gray-900">{timeline}</span>
-                </div>
+                <h3 className="text-xl font-semibold text-white">{texts.title}</h3>
+                <p className="text-sm text-white/60">{texts.subtitle}</p>
               </div>
-            )}
+            </div>
+            <button 
+              onClick={onCancel}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-white/60" />
+            </button>
           </div>
-        )}
+
+          {/* Form Fields */}
+          <div className="space-y-6">
+            {/* Title */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                {texts.titleLabel}
+              </label>
+              <input
+                type="text"
+                value={editableTitle}
+                onChange={(e) => setEditableTitle(e.target.value)}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-400 focus:bg-white/15 transition-all"
+                placeholder="Enter intent title..."
+              />
+            </div>
+
+            {/* Category & Priority Row */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  {texts.categoryLabel}
+                </label>
+                <select
+                  value={editableCategory}
+                  onChange={(e) => setEditableCategory(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400 focus:bg-white/15 transition-all"
+                >
+                  <option value="Travel">Travel</option>
+                  <option value="Design">Design</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Technology">Technology</option>
+                  <option value="Business">Business</option>
+                  <option value="General">General</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  {texts.priorityLabel}
+                </label>
+                <select
+                  value={editablePriority}
+                  onChange={(e) => setEditablePriority(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-blue-400 focus:bg-white/15 transition-all"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                {texts.descriptionLabel}
+              </label>
+              <textarea
+                value={editableDescription}
+                onChange={(e) => setEditableDescription(e.target.value)}
+                rows={4}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-400 focus:bg-white/15 transition-all resize-none"
+                placeholder="Describe your collaboration opportunity..."
+              />
+            </div>
+
+            {/* Location Row */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                <MapPin className="w-4 h-4 inline mr-1" />
+                {texts.locationLabel}
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  value={editableCity}
+                  onChange={(e) => setEditableCity(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-400 focus:bg-white/15 transition-all"
+                  placeholder={texts.cityPlaceholder}
+                />
+                <input
+                  type="text"
+                  value={editableCountry}
+                  onChange={(e) => setEditableCountry(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-400 focus:bg-white/15 transition-all"
+                  placeholder={texts.countryPlaceholder}
+                />
+              </div>
+            </div>
+
+            {/* Budget & Timeline Row */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  <DollarSign className="w-4 h-4 inline mr-1" />
+                  {texts.budgetLabel}
+                </label>
+                <input
+                  type="text"
+                  value={editableBudget}
+                  onChange={(e) => setEditableBudget(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-400 focus:bg-white/15 transition-all"
+                  placeholder={texts.budgetPlaceholder}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  <Clock className="w-4 h-4 inline mr-1" />
+                  {texts.timelineLabel}
+                </label>
+                <input
+                  type="text"
+                  value={editableTimeline}
+                  onChange={(e) => setEditableTimeline(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-400 focus:bg-white/15 transition-all"
+                  placeholder={texts.timelinePlaceholder}
+                />
+              </div>
+            </div>
+
+            {/* Skills */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                {texts.skillsLabel}
+              </label>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {editableSkills.map((skill, index) => (
+                  <span 
+                    key={index}
+                    className="inline-flex items-center gap-1 bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full text-sm border border-purple-500/30"
+                  >
+                    {skill}
+                    <button
+                      onClick={() => removeSkill(skill)}
+                      className="ml-1 hover:text-purple-300 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <input
+                type="text"
+                placeholder="Add a skill and press Enter..."
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-blue-400 focus:bg-white/15 transition-all"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addSkill(e.currentTarget.value);
+                    e.currentTarget.value = '';
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex space-x-3 mt-8">
+            <button
+              onClick={onCancel}
+              disabled={isLoading}
+              className="flex-1 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {texts.cancelButton}
+            </button>
+            <button 
+              onClick={handleConfirm}
+              disabled={isLoading || !editableTitle.trim() || !editableDescription.trim()}
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-lg transition-all shadow-lg hover:shadow-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Check className="w-4 h-4 mr-2" />
+                  {texts.createButton}
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
-      
-      <div className="flex gap-3 mt-6">
-        <button
-          onClick={onConfirm}
-          disabled={isLoading}
-          className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 font-medium"
-        >
-          {isLoading ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              {texts.creating}
-            </>
-          ) : (
-            <>
-              <Check className="w-4 h-4" />
-              {texts.create}
-            </>
-          )}
-        </button>
-        <button
-          onClick={onCancel}
-          disabled={isLoading}
-          className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-all font-medium"
-        >
-          {texts.cancel}
-        </button>
-      </div>
-    </div>
+    </>
   );
 }

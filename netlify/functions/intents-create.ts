@@ -1,8 +1,9 @@
-import { db } from '../../src/lib/db';
+import { db, refreshDbConnection } from '../../src/lib/db';
 import { intents } from '../../src/lib/schema';
 import { embeddingService } from '../../src/lib/embedding-service';
 import type { Handler, HandlerEvent, HandlerResponse } from '@netlify/functions';
 import { chatService } from '../../src/lib/chat-service';
+import { ailockService } from '../../src/lib/ailock/core';
 
 export const handler: Handler = async (event: HandlerEvent): Promise<HandlerResponse> => {
   if (event.httpMethod === 'OPTIONS') {
@@ -56,17 +57,50 @@ export const handler: Handler = async (event: HandlerEvent): Promise<HandlerResp
         ? extractedData.requiredSkills.slice(0, 5) 
         : ['Collaboration', 'Communication'],
       budget: typeof extractedData.budget === 'number' && extractedData.budget > 0 
-        ? Math.round(extractedData.budget * 100) // Convert to cents
+        ? extractedData.budget // Keep the original value
         : null,
       timeline: extractedData.timeline?.substring(0, 50) || null,
       priority: validatePriority(extractedData.priority) || 'medium',
       status: 'active'
     };
 
-    // Create intent in database
-    const newIntent = await db.insert(intents).values(intentDataToSave).returning();
+    // Create intent in database, with retry logic for transient connection errors
+    let newIntent;
+    try {
+      newIntent = await db.insert(intents).values(intentDataToSave).returning();
+    } catch (error: any) {
+      console.warn('Initial DB insert failed. Refreshing connection and retrying...', error.message);
+      
+      // Check if it's the kind of error we want to retry based on the error log
+      if (error.toString().includes('fetch failed')) {
+        refreshDbConnection(); // Refresh the connection
+        newIntent = await db.insert(intents).values(intentDataToSave).returning(); // Retry
+        console.log('✅ DB insert succeeded on retry.');
+      } else {
+        // It's a different error, re-throw it to be caught by the outer block
+        throw error;
+      }
+    }
 
     console.log(`✅ Intent created: ${newIntent[0].id} - ${intentDataToSave.title}`);
+
+    // --- Ailock XP Gain ---
+    let xpResult = null;
+    if (userId) {
+      try {
+        const ailockProfile = await ailockService.getOrCreateAilock(userId);
+        if (ailockProfile) {
+          xpResult = await ailockService.gainXp(ailockProfile.id, 'intent_created', { intentId: newIntent[0].id });
+          console.log(`✅ XP Gained for intent creation: ${xpResult.xpGained}`);
+          if (xpResult.leveledUp) {
+            console.log(`🚀 Ailock leveled up to level ${xpResult.newLevel}!`);
+          }
+        }
+      } catch (xpError) {
+        console.error('Error awarding XP for intent creation:', xpError);
+      }
+    }
+    // --- End Ailock XP Gain ---
 
     // Generate embedding asynchronously (don't wait for completion)
     if (process.env.OPENAI_API_KEY) {
@@ -91,14 +125,18 @@ export const handler: Handler = async (event: HandlerEvent): Promise<HandlerResp
         mode: 'system',
         metadata: { intentId: newIntent[0].id, embeddingEnabled: !!process.env.OPENAI_API_KEY }
       };
-
-      await chatService.saveMessage(sessionId, intentCreatedMessage);
+      try {
+        await chatService.saveMessage(sessionId, intentCreatedMessage);
+      } catch(e) {
+        console.error("Failed to save message to chat history. This might be a local dev issue with blobs.", e);
+      }
     }
 
     return responseWithCORS(201, {
       intent: newIntent[0],
       message: 'Intent created successfully',
       extractedData: intentDataToSave,
+      xpResult,
       features: {
         embeddingEnabled: !!process.env.OPENAI_API_KEY,
         semanticSearch: !!process.env.OPENAI_API_KEY
@@ -176,9 +214,7 @@ function extractIntentFromMessage(userInput: string, conversationContext: string
 
   return {
     title: title.charAt(0).toUpperCase() + title.slice(1) || `${category} Collaboration Opportunity`,
-    description: userInput.length > 100 
-      ? userInput 
-      : `${userInput} Looking for collaboration and expertise to bring this project to life.`,
+    description: userInput, // Use user input directly for description
     category,
     requiredSkills: foundSkills.length > 0 ? foundSkills : ['Collaboration', 'Communication'],
     priority,
@@ -188,7 +224,8 @@ function extractIntentFromMessage(userInput: string, conversationContext: string
 }
 
 function validateCategory(category: string): string | null {
-  const validCategories = ['Technology', 'Research', 'Design', 'Analytics', 'Blockchain', 'Marketing', 'Security'];
+  // Syncing with frontend options from IntentPreview.tsx
+  const validCategories = ['Travel', 'Design', 'Marketing', 'Technology', 'Business', 'General', 'Research', 'Analytics', 'Blockchain', 'Security'];
   return validCategories.includes(category) ? category : null;
 }
 

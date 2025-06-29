@@ -60,13 +60,35 @@ export const createIntent = async (intentData: any) => {
     });
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to create intent');
+      const errorData = await response.json().catch(() => ({ message: 'Failed to create intent and parse error' }));
+      throw new Error(errorData.message || 'Failed to create intent');
     }
     
     return await response.json();
   } catch (error) {
     console.error('Create intent error:', error);
+    throw error;
+  }
+};
+
+export const deleteIntent = async (intentId: string, userId: string) => {
+  try {
+    const response = await fetch(`${API_BASE}/intents-delete`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ intentId, userId })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Failed to delete intent and parse error' }));
+      throw new Error(errorData.message || 'Failed to delete intent');
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Delete intent error:', error);
     throw error;
   }
 };

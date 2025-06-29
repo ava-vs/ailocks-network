@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Paperclip, Bot, MessageCircle, Copy, Plus, MapPin, TrendingUp, Users, CheckCircle, XCircle, Loader, ArrowRight, BrainCircuit, Search, DraftingCompass, Eye } from 'lucide-react';
+import { Send, Paperclip, Bot, MessageCircle, Copy, Plus, MapPin, TrendingUp, Users, CheckCircle, XCircle, Loader, ArrowRight, BrainCircuit, Search, Eye } from 'lucide-react';
 import { useStore } from '@nanostores/react';
 import { appState, setMode, setLanguage, type AIMode, type Language } from '../../lib/store';
 import { useUserSession } from '../../hooks/useUserSession';
@@ -20,15 +20,6 @@ interface Message {
   timestamp: Date;
   mode: string;
   intents?: IntentCard[];
-}
-
-interface SuggestedAction {
-  id: string;
-  label: string;
-  description: string;
-  icon: string;
-  priority: string;
-  timeline?: string;
 }
 
 interface IntentCard {
@@ -69,7 +60,6 @@ export default function ChatInterface() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'disconnected'>('connecting');
-  const [suggestedActions, setSuggestedActions] = useState<SuggestedAction[]>([]);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [showIntentPreview, setShowIntentPreview] = useState(false);
   const [intentPreview, setIntentPreview] = useState<IntentPreviewData | null>(null);
@@ -79,10 +69,11 @@ export default function ChatInterface() {
   const [demoUsersSeeded, setDemoUsersSeeded] = useState(false);
   const [ailockProfile, setAilockProfile] = useState<FullAilockProfile | null>(null);
   const [ailockId, setAilockId] = useState<string | null>(null);
-  const [levelUpInfo, setLevelUpInfo] = useState<{ 
-    newLevel: number, 
-    skillPointsGained: number, 
-    xpGained: number,
+  const [levelUpInfo, setLevelUpInfo] = useState<{
+    isOpen: boolean;
+    newLevel: number;
+    skillPointsGained: number;
+    xpGained: number;
     newSkillUnlocked?: {
       id: string;
       name: string;
@@ -310,7 +301,6 @@ export default function ChatInterface() {
     setInput('');
     setIsStreaming(true);
     setError(null);
-    setSuggestedActions([]);
 
     // Immediately grant XP for the text message (mirrors voice behaviour)
     handleXpGain();
@@ -423,7 +413,7 @@ export default function ChatInterface() {
                           : msg
                       ));
                     } else if (parsed.type === 'actions') {
-                      setSuggestedActions(parsed.actions);
+                      // This type is no longer used in the new system
                     } else if (parsed.type === 'error') {
                       setError(parsed.error);
                       if (parsed.fallback) {
@@ -493,30 +483,82 @@ export default function ChatInterface() {
   };
 
   const handleCreateIntentClick = () => {
-    // Create a basic intent preview from the last user message or a template
+    console.log('🎯 Create Intent clicked!');
+    console.log('📝 Current input:', input);
+        
+    // Use current input if available, otherwise fall back to lastUserMessage
+    const messageToUse = input.trim() || lastUserMessage;
+    console.log('🔍 Message to use for intent:', messageToUse);
+    
+    if (!messageToUse) {
+      console.warn('⚠️ No message available for intent creation');
+      return;
+    }
+    
+    // Create a basic intent preview from the current input or last user message
+    const detectCategory = (text: string): string => {
+      const lowerText = text.toLowerCase();
+      if (lowerText.includes('путешеств') || lowerText.includes('tour') || lowerText.includes('travel') || lowerText.includes('поездк') || lowerText.includes('trip')) return "Travel";
+      if (lowerText.includes('маркетинг') || lowerText.includes('marketing') || lowerText.includes('реклам') || lowerText.includes('advertising')) return "Marketing";
+      if (lowerText.includes('дизайн') || lowerText.includes('design') || lowerText.includes('креатив') || lowerText.includes('creative')) return "Design";
+      if (lowerText.includes('программ') || lowerText.includes('разработ') || lowerText.includes('develop') || lowerText.includes('coding')) return "Technology";
+      if (lowerText.includes('бизнес') || lowerText.includes('business') || lowerText.includes('консалт') || lowerText.includes('consulting')) return "Business";
+      return "General";
+    };
+
+    const detectSkills = (text: string): string[] => {
+      const lowerText = text.toLowerCase();
+      const skills = ["Collaboration", "Communication"];
+      if (lowerText.includes('react') || lowerText.includes('javascript') || lowerText.includes('программ')) skills.push("Programming");
+      if (lowerText.includes('дизайн') || lowerText.includes('design')) skills.push("Design");
+      if (lowerText.includes('маркетинг') || lowerText.includes('marketing')) skills.push("Marketing");
+      if (lowerText.includes('путешеств') || lowerText.includes('travel')) skills.push("Travel Planning");
+      return skills;
+    };
+
+    const detectedCategory = detectCategory(messageToUse);
+    const detectedSkills = detectSkills(messageToUse);
+    
+    console.log('🏷️ Detected category:', detectedCategory);
+    console.log('🎯 Detected skills:', detectedSkills);
+
     const previewData: IntentPreviewData = {
-      title: lastUserMessage.length > 5 
-        ? lastUserMessage.substring(0, Math.min(50, lastUserMessage.length)) 
+      title: messageToUse.length > 5 
+        ? messageToUse.substring(0, Math.min(50, messageToUse.length)) 
         : "New Collaboration Opportunity",
-      description: lastUserMessage.length > 5 
-        ? lastUserMessage 
+      description: messageToUse.length > 5 
+        ? messageToUse 
         : "Looking for collaboration on an exciting project.",
-      category: "Technology",
-      requiredSkills: ["Collaboration", "Communication"],
+      category: detectedCategory,
+      requiredSkills: detectedSkills,
       priority: "medium"
     };
     
+    console.log('📋 Intent preview data created:', previewData);
+    console.log('🚀 Setting states: showIntentPreview=true, intentPreview=data');
+    
+    // Устанавливаем состояние
     setIntentPreview(previewData);
     setShowIntentPreview(true);
+    
+    // Проверяем состояние через небольшую задержку
+    setTimeout(() => {
+      console.log('⏰ State check after 100ms - showIntentPreview should be true');
+    }, 100);
   };
 
-  const handleCreateIntent = async () => {
+  const handleCreateIntent = async (updatedData?: any) => {
     if (!sessionId || !intentPreview) return;
     
     if (!currentUser.id || currentUser.id === 'loading') {
       setError('Please wait for user data to load before creating intents');
       return;
     }
+
+    // Use updated data from IntentPreview if provided, otherwise use original data
+    const finalIntentData = updatedData || intentPreview;
+    const messageToUse = input.trim() || lastUserMessage;
+    console.log('Creating intent with data:', finalIntentData);
 
     setIsCreatingIntent(true);
     try {
@@ -525,10 +567,10 @@ export default function ChatInterface() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sessionId,
-          userInput: lastUserMessage,
-          location,
+          userInput: messageToUse,
+          location: finalIntentData.location || location, // Use custom location if provided
           language,
-          intentData: intentPreview,
+          intentData: finalIntentData,
           userId: currentUser.id
         })
       });
@@ -555,16 +597,53 @@ export default function ChatInterface() {
           } 
         }));
         
-        setSuggestedActions(prev => prev.filter(action => action.id !== 'create-intent'));
-        
         setShowIntentPreview(false);
         setIntentPreview(null);
+        
+        // Clear the input field after successful creation
+        setInput('');
+        
+        console.log('Intent created successfully:', data.intent);
+
+        if (data.xpResult) {
+          const { xpGained, leveledUp, newLevel, skillPointsGained } = data.xpResult;
+          
+          if (xpGained > 0) {
+            toast.success(`You gained ${xpGained} XP!`);
+          }
+
+          if (leveledUp) {
+            let newSkillUnlocked = null;
+            // Demo logic: unlock semantic search at level 2
+            if (newLevel === 2) {
+              newSkillUnlocked = {
+                id: 'semantic_search',
+                name: 'Semantic Search',
+                description: 'Improves relevance and accuracy of all searches by understanding context.',
+                branch: 'research'
+              };
+            }
+
+            setLevelUpInfo({
+              isOpen: true,
+              newLevel: newLevel,
+              skillPointsGained: skillPointsGained,
+              xpGained: xpGained,
+              newSkillUnlocked: newSkillUnlocked,
+            });
+          }
+          
+          // Notify other components like the header widget to refresh the profile
+          window.dispatchEvent(new CustomEvent('ailock-profile-updated'));
+        }
       } else {
-        throw new Error('Failed to create intent');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to create intent:', errorData);
+        throw new Error(errorData.error || 'Failed to create intent');
       }
     } catch (error) {
+      console.error('Intent creation error:', error);
       setError('Failed to create intent. Please try again.');
-    } finally {
       setIsCreatingIntent(false);
     }
   };
@@ -671,13 +750,7 @@ export default function ChatInterface() {
     }
   };
 
-  const getActionIcon = (iconName: string) => {
-    const icons: Record<string, any> = {
-      Eye, MessageCircle, Copy, Plus, MapPin, TrendingUp, Users, DraftingCompass
-    };
-    const IconComponent = icons[iconName] || Eye;
-    return <IconComponent className="w-4 h-4" />;
-  };
+  // Removed unused getActionIcon function
 
   const isPersistentSession = sessionId && !sessionId.startsWith('local-') && !sessionId.startsWith('fallback-');
 
@@ -719,10 +792,11 @@ export default function ChatInterface() {
                 }
                 
                 setLevelUpInfo({
+                    isOpen: true,
                     newLevel: result.newLevel,
                     skillPointsGained: result.skillPointsGained,
                     xpGained: result.xpGained,
-                    newSkillUnlocked
+                    newSkillUnlocked: newSkillUnlocked,
                 });
                 setAilockProfile(prev => prev ? {...prev, level: result.newLevel, skillPoints: (prev.skillPoints || 0) + result.skillPointsGained} : null);
             }
@@ -943,23 +1017,6 @@ export default function ChatInterface() {
                 </React.Fragment>
               ))}
               
-              {/* Intent Preview */}
-              {showIntentPreview && intentPreview && (
-                <IntentPreview
-                  title={intentPreview.title}
-                  description={intentPreview.description}
-                  category={intentPreview.category}
-                  requiredSkills={intentPreview.requiredSkills}
-                  location={location}
-                  budget={intentPreview.budget}
-                  timeline={intentPreview.timeline}
-                  priority={intentPreview.priority}
-                  onConfirm={handleCreateIntent}
-                  onCancel={handleCancelIntent}
-                  isLoading={isCreatingIntent}
-                />
-              )}
-              
               {isStreaming && !streamingMessageId && (
                 <div className="flex items-center space-x-3 text-white/60 mb-6">
                   <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
@@ -998,6 +1055,7 @@ export default function ChatInterface() {
                 <button
                   title="Create Intent"
                   onClick={handleCreateIntentClick}
+                  disabled={!input.trim() && !lastUserMessage.trim()}
                   className="flex h-8 items-center justify-center rounded-lg bg-blue-400 px-4 text-sm font-medium text-white transition-colors hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <span>Create Intent</span>
@@ -1022,9 +1080,9 @@ export default function ChatInterface() {
         </div>
       </div>
 
-      {levelUpInfo && (
+      {levelUpInfo?.isOpen && (
         <LevelUpModal
-          isOpen={!!levelUpInfo}
+          isOpen={levelUpInfo.isOpen}
           onClose={() => setLevelUpInfo(null)}
           newLevel={levelUpInfo.newLevel}
           skillPointsGained={levelUpInfo.skillPointsGained}
@@ -1039,6 +1097,23 @@ export default function ChatInterface() {
         intent={selectedIntent}
         onStartWork={handleStartWork}
       />
+
+      {/* Intent Preview Modal */}
+      {showIntentPreview && intentPreview && (
+        <IntentPreview
+          title={intentPreview.title}
+          description={intentPreview.description}
+          category={intentPreview.category}
+          requiredSkills={intentPreview.requiredSkills}
+          location={location}
+          budget={intentPreview.budget}
+          timeline={intentPreview.timeline}
+          priority={intentPreview.priority}
+          onConfirm={handleCreateIntent}
+          onCancel={handleCancelIntent}
+          isLoading={isCreatingIntent}
+        />
+      )}
     </div>
   );
 };
