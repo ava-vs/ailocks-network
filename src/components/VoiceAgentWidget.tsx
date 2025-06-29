@@ -150,7 +150,12 @@ export default function VoiceAgentWidget() {
         await navigator.mediaDevices.getUserMedia({ audio: true });
         const signedUrl = await getSignedUrl();
         console.log('✅ Got signed URL.');
-        await conversation.startSession({ signedUrl });
+        await conversation.startSession({
+          signedUrl,
+          dynamicVariables: {
+            username: (currentUser as any)?.name || (currentUser as any)?.email || 'Marco'
+          }
+        });
       } catch (err) {
         console.error('💥 Failed to start conversation:', err);
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
@@ -159,7 +164,7 @@ export default function VoiceAgentWidget() {
         window.dispatchEvent(new CustomEvent('voice-status-update', { detail: { status: 'idle' } }));
       }
     }
-  }, [conversation]);
+  }, [conversation, currentUser]);
   
   useEffect(() => {
     const handleToggle = () => handleToggleConversation();
