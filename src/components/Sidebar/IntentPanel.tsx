@@ -104,7 +104,7 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
     if (!inWorkIntents.some(intent => intent.id === intentToMove.id)) {
       setInWorkIntents(prev => [intentToMove, ...prev]);
       setActiveTab('in-work');
-      toast.success(`"${intentToMove.title.substring(0,20)}..." moved to In Work.`);
+     // toast.success(`"${intentToMove.title.substring(0,20)}..." moved to In Work.`);
     } else {
       toast.error('Intent is already in your "In Work" list.');
     }
