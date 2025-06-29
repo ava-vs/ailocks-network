@@ -20,12 +20,12 @@ const getSignedUrl = async (): Promise<string> => {
 };
 
 export default function VoiceAgentWidget() {
-  const { currentUser } = useUserSession();
+  const { user } = useUserSession();
   const [ailockId, setAilockId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (currentUser && currentUser.id !== 'loading') {
-      getProfile(currentUser.id)
+    if (user && user.id !== 'loading') {
+      getProfile(user.id)
         .then(profile => {
           if (profile) {
             setAilockId(profile.id);
@@ -33,7 +33,7 @@ export default function VoiceAgentWidget() {
         })
         .catch(err => console.error("Failed to get Ailock ID for voice agent", err));
     }
-  }, [currentUser]);
+  }, [user]);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -153,7 +153,7 @@ export default function VoiceAgentWidget() {
         await conversation.startSession({
           signedUrl,
           dynamicVariables: {
-            username: (currentUser as any)?.name || (currentUser as any)?.email || 'Marco'
+            username: (user as any)?.name || (user as any)?.email || 'Marco'
           }
         });
       } catch (err) {
@@ -164,7 +164,7 @@ export default function VoiceAgentWidget() {
         window.dispatchEvent(new CustomEvent('voice-status-update', { detail: { status: 'idle' } }));
       }
     }
-  }, [conversation, currentUser]);
+  }, [conversation, user]);
   
   useEffect(() => {
     const handleToggle = () => handleToggleConversation();
