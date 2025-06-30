@@ -5,6 +5,7 @@ import { useCallback, useEffect } from 'react';
 import { searchIntents } from '../lib/api';
 import { useAilock } from '../hooks/useAilock';
 import toast from 'react-hot-toast';
+import { useAuth } from '../hooks/useAuth';
 
 const AGENT_ID = import.meta.env.PUBLIC_AGENT_ID || import.meta.env.AGENT_ID;
 
@@ -20,6 +21,7 @@ const getSignedUrl = async (): Promise<string> => {
 
 export default function VoiceAgentWidget() {
   const { profile: ailockProfile, gainXp } = useAilock();
+  const { user } = useAuth();
 
   const conversation = useConversation({
     onConnect: () => {
@@ -130,7 +132,12 @@ export default function VoiceAgentWidget() {
         await navigator.mediaDevices.getUserMedia({ audio: true });
         const signedUrl = await getSignedUrl();
         console.log('✅ Got signed URL.');
-        await conversation.startSession({ signedUrl });
+        await conversation.startSession({ 
+          signedUrl,
+          dynamicVariables: {
+            username: (user as any)?.name || (user as any)?.email || 'Marco'
+          }
+        });
       } catch (err) {
         console.error('💥 Failed to start conversation:', err);
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
