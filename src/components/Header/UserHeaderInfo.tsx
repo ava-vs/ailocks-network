@@ -1,10 +1,10 @@
 import { useUserSession } from '@/hooks/useUserSession';
 import { useLocation } from '@/hooks/useLocation';
-import { Gem, Users, ChevronDown, User } from 'lucide-react';
+import { Gem, Users, ChevronDown, User, LogOut } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 
 export default function UserHeaderInfo() {
-  const { currentUser, isHydrated, switchUser, isLirea, isMarco, demoUsersLoaded } = useUserSession();
+  const { currentUser, isAuthenticated, isLoading, logout } = useUserSession();
   const location = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -23,25 +23,37 @@ export default function UserHeaderInfo() {
     }
   }, [showUserMenu]);
 
-  if (!isHydrated) {
+  if (isLoading) {
     return <div className="h-10 w-64 bg-white/5 animate-pulse rounded-lg"></div>;
   }
-  
-  const getUserRole = () => {
-    if (isLirea) return 'Designer';
-    if (isMarco) return 'Manager'; 
-    return 'User';
-  };
 
-  const getUserDescription = () => {
-    if (isLirea) return 'UX/UI Designer';
-    if (isMarco) return 'Project Manager';
-    return 'Team Member';
-  };
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center space-x-4">
+        <span className="text-white/70 text-sm">Please sign in to continue</span>
+        <a 
+          href="/pricing"
+          className="flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:scale-105 transition-transform duration-200"
+        >
+          <Gem className="w-4 h-4" />
+          <span className="hidden sm:inline">Upgrade</span>
+        </a>
+      </div>
+    );
+  }
 
   const handleProfileClick = () => {
     setShowUserMenu(false);
     window.location.href = '/profile';
+  };
+
+  const handleLogout = async () => {
+    setShowUserMenu(false);
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   return (
@@ -53,16 +65,14 @@ export default function UserHeaderInfo() {
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center space-x-2 hover:text-white transition-colors"
           >
-            {/* CRITICAL FIX 2: Add green indicator to Lirea */}
+            {/* Status indicator */}
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              <span>{currentUser.name} • {getUserRole()}</span>
+              <span className="w-2 h-2 rounded-full animate-pulse bg-green-500"></span>
+              <span>{currentUser.name} • Member</span>
             </div>
-            {demoUsersLoaded && (
-              <ChevronDown 
-                className={`w-3 h-3 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} 
-              />
-            )}
+            <ChevronDown 
+              className={`w-3 h-3 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} 
+            />
           </button>
           
           {/* User Menu */}
@@ -78,21 +88,13 @@ export default function UserHeaderInfo() {
                 <span>View Profile</span>
               </button>
               
-              {demoUsersLoaded && (
-                <>
-                  <div className="text-xs text-white/50 mb-2 mt-3 px-2">Switch User</div>
-                  <button
-                    onClick={() => {
-                      switchUser();
-                      setShowUserMenu(false);
-                    }}
-                    className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 rounded-md transition-colors flex items-center space-x-2"
-                  >
-                    <span>{isLirea ? '👨‍💼' : '👩‍🎨'}</span>
-                    <span>{isLirea ? 'Marco • Manager' : 'Lirea • Designer'}</span>
-                  </button>
-                </>
-              )}
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 rounded-md transition-colors flex items-center space-x-2"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sign Out</span>
+              </button>
             </div>
           )}
         </div>
@@ -107,16 +109,14 @@ export default function UserHeaderInfo() {
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center space-x-1 hover:text-white transition-colors"
           >
-            {/* CRITICAL FIX 2: Add green indicator to Lirea */}
+            {/* Status indicator */}
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              <span className="w-2 h-2 rounded-full animate-pulse bg-green-500"></span>
               <span>{currentUser.name}</span>
             </div>
-            {demoUsersLoaded && (
-              <ChevronDown 
-                className={`w-3 h-3 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} 
-              />
-            )}
+            <ChevronDown 
+              className={`w-3 h-3 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} 
+            />
           </button>
           
           {/* User Menu - Mobile */}
@@ -129,17 +129,12 @@ export default function UserHeaderInfo() {
                 Profile
               </button>
               
-              {demoUsersLoaded && (
-                <button
-                  onClick={() => {
-                    switchUser();
-                    setShowUserMenu(false);
-                  }}
-                  className="w-full text-left px-2 py-1 text-sm text-white/80 hover:bg-white/10 rounded-md transition-colors"
-                >
-                  {isLirea ? 'Marco' : 'Lirea'}
-                </button>
-              )}
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-2 py-1 text-sm text-white/80 hover:bg-white/10 rounded-md transition-colors"
+              >
+                Sign Out
+              </button>
             </div>
           )}
         </div>
@@ -151,7 +146,7 @@ export default function UserHeaderInfo() {
       <div className="md:hidden">
         <button
           onClick={handleProfileClick}
-          className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-sm font-bold text-white hover:bg-purple-600 transition-colors"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white bg-blue-500 hover:bg-blue-600 transition-colors"
         >
           {currentUser.name.charAt(0)}
         </button>

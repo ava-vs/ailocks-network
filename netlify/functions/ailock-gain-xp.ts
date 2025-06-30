@@ -41,6 +41,7 @@ export const handler: Handler = async (event) => {
     }
 
     const { ailockId, eventType, context = {} } = JSON.parse(body);
+    console.log('Ailock gain XP request:', { ailockId, eventType, context });
 
     if (!ailockId || !eventType) {
       return {
@@ -51,6 +52,7 @@ export const handler: Handler = async (event) => {
     }
 
     const result = await ailockService.gainXp(ailockId, eventType, context);
+    console.log('Ailock gain XP result:', result);
 
     return {
       statusCode: 200,

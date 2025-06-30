@@ -1,10 +1,9 @@
 'use client';
 
 import { useConversation } from '@elevenlabs/react';
-import { useState, useCallback, useEffect } from 'react';
-import { searchIntents, createIntent, getAilockProfile, gainAilockXp } from '../lib/api';
-import { getProfile, gainXp } from '../lib/ailock/api';
-import { useUserSession } from '../hooks/useUserSession';
+import { useCallback, useEffect } from 'react';
+import { searchIntents } from '../lib/api';
+import { useAilock } from '../hooks/useAilock';
 import toast from 'react-hot-toast';
 
 const AGENT_ID = import.meta.env.PUBLIC_AGENT_ID || import.meta.env.AGENT_ID;
@@ -20,25 +19,13 @@ const getSignedUrl = async (): Promise<string> => {
 };
 
 export default function VoiceAgentWidget() {
-  const { currentUser } = useUserSession();
-  const [ailockId, setAilockId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (currentUser && currentUser.id !== 'loading') {
-      getProfile(currentUser.id)
-        .then(profile => {
-          if (profile) {
-            setAilockId(profile.id);
-          }
-        })
-        .catch(err => console.error("Failed to get Ailock ID for voice agent", err));
-    }
-  }, [currentUser]);
+  const { profile: ailockProfile, gainXp } = useAilock();
 
   const conversation = useConversation({
     onConnect: () => {
       console.log('✅ Voice agent connected');
-      toast.success('🎤 Ailock Online!');
+      toast.success('✅ Ailock Online!');
+      window.dispatchEvent(new CustomEvent('voice-status-update', { detail: { status: 'idle' } }));
     },
     onDisconnect: () => {
       console.log('❌ Voice agent disconnected');
@@ -49,15 +36,8 @@ export default function VoiceAgentWidget() {
     onMessage: (message: any) => {
       console.log('📨 Dispatching voice message to main chat:', message);
       window.dispatchEvent(new CustomEvent('add-message-to-chat', { detail: message }));
-      if (message.source === 'user' && ailockId) {
-        gainXp(ailockId, 'voice_message_sent')
-          .then(result => {
-            if (result.success) {
-              toast.success(`+${result.xpGained} XP (voice)`, { duration: 1500, icon: '🎙️' });
-              window.dispatchEvent(new CustomEvent('ailock-profile-updated'));
-            }
-          })
-          .catch(err => console.warn("Failed to gain XP for voice message", err));
+      if (message.source === 'user' && ailockProfile) {
+        gainXp('voice_message_sent');
       }
     },
     onError: (error: any) => {

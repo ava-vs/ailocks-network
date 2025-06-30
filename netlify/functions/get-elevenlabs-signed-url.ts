@@ -1,8 +1,43 @@
 import type { Context } from '@netlify/functions';
 
+async function fetchWithRetry(url: string, options: RequestInit, maxRetries: number = 3): Promise<Response> {
+  let lastError: Error;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Attempt ${attempt}/${maxRetries} to fetch signed URL from ElevenLabs...`);
+      
+      const response = await fetch(url, options);
+      console.log(`✅ Attempt ${attempt} successful with status: ${response.status}`);
+      return response;
+      
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`❌ Attempt ${attempt} failed:`, error.message);
+      
+      // Check if it's a network error that we should retry
+      const isNetworkError = error.message.includes('fetch failed') || 
+                            error.cause?.code === 'UND_ERR_CONNECT_TIMEOUT' ||
+                            error.code === 'ECONNRESET' ||
+                            error.code === 'ENOTFOUND';
+      
+      if (!isNetworkError || attempt === maxRetries) {
+        throw error;
+      }
+      
+      // Exponential backoff: 1s, 2s, 4s
+      const delay = Math.pow(2, attempt - 1) * 1000;
+      console.log(`⏳ Waiting ${delay}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError!;
+}
+
 export default async (req: Request, context: Context) => {
   // Log all available environment variables for debugging
-  console.log("Available environment variables:", Object.keys(process.env));
+  // console.log("Available environment variables:", Object.keys(process.env));
   
   const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
   const PUBLIC_AGENT_ID = process.env.PUBLIC_AGENT_ID;
@@ -31,12 +66,12 @@ export default async (req: Request, context: Context) => {
     
     console.log(`Fetching signed URL for agent: ${PUBLIC_AGENT_ID}`);
 
-    const response = await fetch(apiUrl, {
+    const response = await fetchWithRetry(apiUrl, {
       method: 'GET',
       headers: {
         'xi-api-key': ELEVENLABS_API_KEY,
       },
-    });
+    }, 3); // 3 attempts total
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -57,13 +92,23 @@ export default async (req: Request, context: Context) => {
         });
     }
 
+    console.log("✅ Successfully obtained signed URL from ElevenLabs");
     return new Response(JSON.stringify({ signedUrl: data.signed_url }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('Error in get-elevenlabs-signed-url function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    
+    let errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    
+    // Provide more specific error messages for network issues
+    if (error instanceof Error && (error as any).cause?.code === 'UND_ERR_CONNECT_TIMEOUT') {
+      errorMessage = 'Could not connect to ElevenLabs API after multiple attempts (connection timeout). Please check your network connection and firewall settings.';
+    } else if (error instanceof Error && error.message.includes('fetch failed')) {
+      errorMessage = 'Network error: Unable to reach ElevenLabs servers after multiple retry attempts. Please check your internet connection.';
+    }
+    
     return new Response(JSON.stringify({ error: `Internal server error: ${errorMessage}` }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

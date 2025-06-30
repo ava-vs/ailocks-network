@@ -8,6 +8,9 @@ export const users = pgTable('users', {
   city: varchar('city', { length: 255 }),
   timezone: varchar('timezone', { length: 50 }),
   languages: text('languages').array(),
+  // Authentication fields
+  passwordHash: varchar('password_hash', { length: 255 }),
+  lastLogin: timestamp('last_login'),
   createdAt: timestamp('created_at').defaultNow(),
   updatedAt: timestamp('updated_at').defaultNow()
 });

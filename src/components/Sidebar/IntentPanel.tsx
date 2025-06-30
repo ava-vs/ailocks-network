@@ -34,10 +34,10 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
   const [intents, setIntents] = useState<Intent[]>([]);
   const [inWorkIntents, setInWorkIntents] = useState<Intent[]>([]);
   const [myIntents, setMyIntents] = useState<Intent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingIntents, setIsLoadingIntents] = useState(true);
   const [searchQuery, setSearchQuery] = useState<string | null>(null);
   const [dbStatus, setDbStatus] = useState<'connected' | 'error' | 'checking'>('checking');
-  const { currentUser, isHydrated } = useUserSession();
+  const { currentUser, isAuthenticated, isLoading: isUserLoading } = useUserSession();
   const [notificationCount, setNotificationCount] = useState(0);
   const [deletingIntentId, setDeletingIntentId] = useState<string | null>(null);
 
@@ -80,7 +80,7 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
     setSearchQuery(query);
     setIntents(results);
     setActiveTab('nearby');
-    setIsLoading(false);
+    setIsLoadingIntents(false);
     if (!isExpanded) {
       setNotificationCount(prev => prev + results.length);
     }
@@ -93,7 +93,7 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
     setSearchQuery(query);
     setIntents(intents);
     setActiveTab('nearby');
-    setIsLoading(false);
+    setIsLoadingIntents(false);
     if (!isExpanded) {
       setNotificationCount(prev => prev + intents.length);
     }
@@ -175,10 +175,10 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
   };
 
   useEffect(() => {
-    if (isHydrated) {
+    if (!isUserLoading && isAuthenticated) {
       handleUserChanged();
     }
-  }, [currentUser.id, isHydrated]);
+  }, [currentUser.id, isUserLoading, isAuthenticated]);
 
 
   useEffect(() => {
@@ -196,13 +196,13 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
   }, [handleSearchResults, handleVoiceSearchResults, handleIntentInWork]);
 
   const fetchIntents = async (query = '') => {
-    setIsLoading(true);
+    setIsLoadingIntents(true);
     const isDbConnected = await checkDbStatus();
 
     if (!isDbConnected) {
       console.log('Using mock data because DB is not connected.');
       setIntents(getMockIntents());
-      setIsLoading(false);
+      setIsLoadingIntents(false);
       return;
     }
 
@@ -219,7 +219,7 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
       console.error('Error fetching intents:', error);
       setIntents(getMockIntents());
     } finally {
-      setIsLoading(false);
+      setIsLoadingIntents(false);
     }
   };
 
@@ -503,7 +503,7 @@ export default function IntentPanel({ isExpanded = false, setIsRightPanelExpande
           </p>
         )}
         
-        {isLoading ? (
+        {isLoadingIntents ? (
           <LoadingSkeleton />
         ) : (
           <div>

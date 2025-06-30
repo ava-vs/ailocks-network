@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useUserSession } from '@/hooks/useUserSession';
+import { useAuth } from '@/hooks/useAuth';
 import { ailockApi } from '@/lib/ailock/api';
 import type { FullAilockProfile } from '@/lib/ailock/shared';
 import { getLevelInfo } from '@/lib/ailock/shared';
@@ -7,36 +8,48 @@ import AilockQuickStatus from './AilockQuickStatus';
 
 export default function AilockHeaderWidget() {
   const { currentUser } = useUserSession();
+  const { user: authUser } = useAuth();
   const [profile, setProfile] = useState<FullAilockProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isQuickStatusOpen, setIsQuickStatusOpen] = useState(false);
 
+  // Use auth user if available, otherwise fallback to demo user
+  const displayUser = authUser || currentUser;
+  const userId = displayUser?.id;
+
   useEffect(() => {
-    if (currentUser.id && currentUser.id !== 'loading') {
+    if (userId && userId !== 'loading') {
       loadProfile();
     }
-  }, [currentUser.id]);
+  }, [userId]);
 
   // Listen for profile updates from other components
   useEffect(() => {
     const handleProfileUpdate = () => {
-      if (currentUser.id && currentUser.id !== 'loading') {
+      if (userId && userId !== 'loading') {
         loadProfile();
       }
     };
 
     window.addEventListener('ailock-profile-updated', handleProfileUpdate);
     return () => window.removeEventListener('ailock-profile-updated', handleProfileUpdate);
-  }, [currentUser.id]);
+  }, [userId]);
 
   const loadProfile = async () => {
+    if (!userId || userId === 'loading') return;
+    
     try {
       setLoading(true);
-      const ailockProfile = await ailockApi.getProfile(currentUser.id);
+      const ailockProfile = await ailockApi.getProfile(userId);
       setProfile(ailockProfile);
       console.log('✅ Ailock profile loaded successfully:', ailockProfile?.name);
     } catch (error) {
       console.error('Failed to load Ailock profile for header:', error);
+      // For authenticated users, we might not have an Ailock profile yet
+      if (authUser) {
+        console.log('Creating new Ailock profile for authenticated user...');
+        // The profile will be created automatically when needed
+      }
     } finally {
       setLoading(false);
     }

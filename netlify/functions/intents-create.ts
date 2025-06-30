@@ -1,4 +1,4 @@
-import { db, refreshDbConnection } from '../../src/lib/db';
+import { db, withDbRetry } from '../../src/lib/db';
 import { intents } from '../../src/lib/schema';
 import { embeddingService } from '../../src/lib/embedding-service';
 import type { Handler, HandlerEvent, HandlerResponse } from '@netlify/functions';
@@ -65,22 +65,9 @@ export const handler: Handler = async (event: HandlerEvent): Promise<HandlerResp
     };
 
     // Create intent in database, with retry logic for transient connection errors
-    let newIntent;
-    try {
-      newIntent = await db.insert(intents).values(intentDataToSave).returning();
-    } catch (error: any) {
-      console.warn('Initial DB insert failed. Refreshing connection and retrying...', error.message);
-      
-      // Check if it's the kind of error we want to retry based on the error log
-      if (error.toString().includes('fetch failed')) {
-        refreshDbConnection(); // Refresh the connection
-        newIntent = await db.insert(intents).values(intentDataToSave).returning(); // Retry
-        console.log('✅ DB insert succeeded on retry.');
-      } else {
-        // It's a different error, re-throw it to be caught by the outer block
-        throw error;
-      }
-    }
+    const newIntent = await withDbRetry(async () => {
+      return await db.insert(intents).values(intentDataToSave).returning();
+    });
 
     console.log(`✅ Intent created: ${newIntent[0].id} - ${intentDataToSave.title}`);
 

@@ -78,10 +78,31 @@ export class AilockService {
     console.log(`[AilockService] Attempting to find profile for userId: ${userId} using Drizzle ORM.`);
     
     try {
-      const existingProfiles = await db.select()
-        .from(ailocks)
-        .where(eq(ailocks.userId, userId))
-        .limit(1);
+      // Get existing profiles with retry
+      let existingProfiles: any[] = [];
+      let attempt = 0;
+      const maxAttempts = 2;
+      
+      while (attempt < maxAttempts) {
+        try {
+          existingProfiles = await db.select()
+            .from(ailocks)
+            .where(eq(ailocks.userId, userId))
+            .limit(1);
+          break;
+        } catch (dbError) {
+          attempt++;
+          console.log(`Ailock findOrCreateBaseProfile: DB attempt ${attempt} failed`, dbError);
+          
+          if (attempt >= maxAttempts) {
+            throw dbError;
+          }
+          
+          const { refreshDbConnection } = await import('../db');
+          refreshDbConnection();
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
 
       if (existingProfiles.length > 0) {
         console.log(`[AilockService] Found existing profile for userId: ${userId}`);
@@ -104,7 +125,27 @@ export class AilockService {
           }
         };
 
-        const newAilocks = await db.insert(ailocks).values(newProfileData).returning();
+        // Insert new profile with retry
+        let newAilocks: any[] = [];
+        attempt = 0;
+        
+        while (attempt < maxAttempts) {
+          try {
+            newAilocks = await db.insert(ailocks).values(newProfileData).returning();
+            break;
+          } catch (dbError) {
+            attempt++;
+            console.log(`Ailock findOrCreateBaseProfile: Insert attempt ${attempt} failed`, dbError);
+            
+            if (attempt >= maxAttempts) {
+              throw dbError;
+            }
+            
+            const { refreshDbConnection } = await import('../db');
+            refreshDbConnection();
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        }
 
         if (newAilocks.length === 0) {
           throw new Error('Failed to create a new Ailock profile.');
@@ -123,7 +164,30 @@ export class AilockService {
     const xpGained = XP_REWARDS[eventType] || 0;
     if (xpGained === 0) return { success: false, reason: 'No XP for this event.' };
 
-    const ailock = await db.select().from(ailocks).where(eq(ailocks.id, ailockId)).limit(1);
+    // Get ailock with retry mechanism
+    let ailock: any[] = [];
+    let attempt = 0;
+    const maxAttempts = 2;
+    
+    while (attempt < maxAttempts) {
+      try {
+        ailock = await db.select().from(ailocks).where(eq(ailocks.id, ailockId)).limit(1);
+        break;
+      } catch (dbError) {
+        attempt++;
+        console.log(`Ailock gainXp: DB attempt ${attempt} failed`, dbError);
+        
+        if (attempt >= maxAttempts) {
+          throw dbError;
+        }
+        
+        // Refresh connection and wait before retry
+        const { refreshDbConnection } = await import('../db');
+        refreshDbConnection();
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
+    
     if (ailock.length === 0) return { success: false, reason: 'Ailock not found.' };
 
     const currentProfile = ailock[0];
@@ -140,25 +204,63 @@ export class AilockService {
       skillPointsGained = newLevelInfo.level - oldLevelInfo.level; // 1 point per level
     }
     
-    // Update profile in DB
-    const updatedAilocks = await db.update(ailocks)
-      .set({
-        xp: newXp,
-        level: newLevelInfo.level,
-        skillPoints: (currentProfile.skillPoints ?? 0) + skillPointsGained,
-        lastActiveAt: new Date()
-      })
-      .where(eq(ailocks.id, ailockId))
-      .returning();
+    // Update profile in DB with retry
+    let updatedAilocks: any[] = [];
+    attempt = 0;
+    
+    while (attempt < maxAttempts) {
+      try {
+        updatedAilocks = await db.update(ailocks)
+          .set({
+            xp: newXp,
+            level: newLevelInfo.level,
+            skillPoints: (currentProfile.skillPoints ?? 0) + skillPointsGained,
+            lastActiveAt: new Date()
+          })
+          .where(eq(ailocks.id, ailockId))
+          .returning();
+        break;
+      } catch (dbError) {
+        attempt++;
+        console.log(`Ailock gainXp: Update attempt ${attempt} failed`, dbError);
+        
+        if (attempt >= maxAttempts) {
+          throw dbError;
+        }
+        
+        const { refreshDbConnection } = await import('../db');
+        refreshDbConnection();
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
 
-    // Log the XP event
-    await db.insert(ailockXpHistory).values({
-      ailockId,
-      eventType,
-      xpGained,
-      description: `Gained ${xpGained} XP for ${eventType}.`,
-      context,
-    });
+    // Log the XP event with retry
+    attempt = 0;
+    while (attempt < maxAttempts) {
+      try {
+        await db.insert(ailockXpHistory).values({
+          ailockId,
+          eventType,
+          xpGained,
+          description: `Gained ${xpGained} XP for ${eventType}.`,
+          context,
+        });
+        break;
+      } catch (dbError) {
+        attempt++;
+        console.log(`Ailock gainXp: Insert XP history attempt ${attempt} failed`, dbError);
+        
+        if (attempt >= maxAttempts) {
+          // Don't fail the whole operation if XP history logging fails
+          console.error('Failed to log XP history after retries, but continuing');
+          break;
+        }
+        
+        const { refreshDbConnection } = await import('../db');
+        refreshDbConnection();
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
 
     return {
       success: true,
@@ -172,7 +274,29 @@ export class AilockService {
   }
 
   async upgradeSkill(ailockId: string, skillId: string): Promise<boolean> {
-    const profileResult = await db.select().from(ailocks).where(eq(ailocks.id, ailockId)).limit(1);
+    // Get profile with retry mechanism
+    let profileResult: any[] = [];
+    let attempt = 0;
+    const maxAttempts = 2;
+    
+    while (attempt < maxAttempts) {
+      try {
+        profileResult = await db.select().from(ailocks).where(eq(ailocks.id, ailockId)).limit(1);
+        break;
+      } catch (dbError) {
+        attempt++;
+        console.log(`Ailock upgradeSkill: DB attempt ${attempt} failed`, dbError);
+        
+        if (attempt >= maxAttempts) {
+          throw dbError;
+        }
+        
+        const { refreshDbConnection } = await import('../db');
+        refreshDbConnection();
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
+    
     if(!profileResult.length) return false;
     const profile = profileResult[0];
 
@@ -196,23 +320,77 @@ export class AilockService {
         const skillDefinition = SKILL_TREE[skillId];
         if (!skillDefinition) return false;
 
-        await db.insert(ailockSkills).values({
-            ailockId,
-            skillId,
-            skillName: skillDefinition.name,
-            branch: skillDefinition.branch,
-            currentLevel: 1,
-            unlockedAt: new Date(),
-        });
+        // Insert new skill with retry
+        attempt = 0;
+        while (attempt < maxAttempts) {
+          try {
+            await db.insert(ailockSkills).values({
+                ailockId,
+                skillId,
+                skillName: skillDefinition.name,
+                branch: skillDefinition.branch,
+                currentLevel: 1,
+                unlockedAt: new Date(),
+            });
+            break;
+          } catch (dbError) {
+            attempt++;
+            console.log(`Ailock upgradeSkill: Insert skill attempt ${attempt} failed`, dbError);
+            
+            if (attempt >= maxAttempts) {
+              throw dbError;
+            }
+            
+            const { refreshDbConnection } = await import('../db');
+            refreshDbConnection();
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        }
     } else {
-        await db.update(ailockSkills)
-          .set({ currentLevel: (existingSkill.currentLevel ?? 0) + 1 })
-          .where(eq(ailockSkills.id, existingSkill.id));
+        // Update existing skill with retry
+        attempt = 0;
+        while (attempt < maxAttempts) {
+          try {
+            await db.update(ailockSkills)
+              .set({ currentLevel: (existingSkill.currentLevel ?? 0) + 1 })
+              .where(eq(ailockSkills.id, existingSkill.id));
+            break;
+          } catch (dbError) {
+            attempt++;
+            console.log(`Ailock upgradeSkill: Update skill attempt ${attempt} failed`, dbError);
+            
+            if (attempt >= maxAttempts) {
+              throw dbError;
+            }
+            
+            const { refreshDbConnection } = await import('../db');
+            refreshDbConnection();
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        }
     }
 
-    await db.update(ailocks)
-      .set({ skillPoints: (profile.skillPoints ?? 0) - 1 })
-      .where(eq(ailocks.id, ailockId));
+    // Update ailock skill points with retry
+    attempt = 0;
+    while (attempt < maxAttempts) {
+      try {
+        await db.update(ailocks)
+          .set({ skillPoints: (profile.skillPoints ?? 0) - 1 })
+          .where(eq(ailocks.id, ailockId));
+        break;
+      } catch (dbError) {
+        attempt++;
+        console.log(`Ailock upgradeSkill: Update ailock attempt ${attempt} failed`, dbError);
+        
+        if (attempt >= maxAttempts) {
+          throw dbError;
+        }
+        
+        const { refreshDbConnection } = await import('../db');
+        refreshDbConnection();
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
 
     return true;
   }

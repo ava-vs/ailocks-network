@@ -1,4 +1,5 @@
-import { atom } from 'nanostores';
+import { atom, map } from 'nanostores';
+import type { FullAilockProfile as AilockProfile } from './ailock/shared';
 
 export type AIMode = 'researcher' | 'creator' | 'analyst';
 export type Language = 'en' | 'ru';
@@ -13,12 +14,20 @@ export interface UserLocation {
   isDefault?: boolean;
 }
 
-export const appState = atom({
-  activeMode: 'researcher' as AIMode,
-  language: 'en' as Language,
-  userLocation: { country: 'US', city: 'New York', timezone: 'America/New_York', isDefault: true } as UserLocation,
+interface AppState {
+  activeMode: AIMode;
+  language: Language;
+  location: UserLocation | null;
+  isMobileMenuOpen: boolean;
+  isClientInitialized: boolean;
+}
+
+export const appState = map<AppState>({
+  activeMode: 'researcher',
+  language: 'en',
+  location: null,
+  isMobileMenuOpen: false,
   isClientInitialized: false,
-  isMobileMenuOpen: false, // For controlling the mobile sidebar
 });
 
 // Getter for client initialization status
@@ -26,22 +35,23 @@ export const isClientInitialized = atom(false);
 
 // Actions to update the store
 export function initializeClient() {
-  const currentState = appState.get();
-  if (!currentState.isClientInitialized) {
-    appState.set({ ...currentState, isClientInitialized: true });
-    isClientInitialized.set(true);
-    //
+  if (typeof window !== 'undefined' && !appState.get().isClientInitialized) {
+    const storedLang = localStorage.getItem('ailocks-language') as Language | null;
+    if (storedLang && ['en', 'ru'].includes(storedLang)) {
+      appState.setKey('language', storedLang);
+    }
+    appState.setKey('isClientInitialized', true);
   }
 }
 
 export function setMode(mode: AIMode) {
-  appState.set({ ...appState.get(), activeMode: mode });
+  appState.setKey('activeMode', mode);
 }
 
 export function setLanguage(language: Language) {
   const currentLanguage = appState.get().language;
   if (currentLanguage !== language) {
-    appState.set({ ...appState.get(), language });
+    appState.setKey('language', language);
     if (typeof window !== 'undefined') {
       localStorage.setItem('ailocks-language', language);
     }
@@ -49,12 +59,11 @@ export function setLanguage(language: Language) {
 }
 
 export function setLocation(location: UserLocation) {
-  appState.set({ ...appState.get(), userLocation: location });
+  appState.setKey('location', location);
 }
 
 export function toggleMobileMenu() {
-  const state = appState.get();
-  appState.set({ ...state, isMobileMenuOpen: !state.isMobileMenuOpen });
+  appState.setKey('isMobileMenuOpen', !appState.get().isMobileMenuOpen);
 }
 
 // Legacy stores - can be phased out
@@ -64,7 +73,9 @@ export const userLocation = atom<UserLocation>({ country: 'US', city: 'New York'
 // Sync legacy stores with the main appState
 appState.subscribe(state => {
   currentLanguage.set(state.language);
-  userLocation.set(state.userLocation);
+  if (state.location) {
+    userLocation.set(state.location);
+  }
 });
 
 // Initialize from server-detected data only on client
@@ -105,4 +116,35 @@ if (typeof window !== 'undefined') {
   } else {
     initializeFromServer();
   }
+}
+
+// --- Ailock Profile Store ---
+
+export type FullAilockProfile = AilockProfile;
+
+export interface AilockState {
+  profile: FullAilockProfile | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
+export const ailockStore = map<AilockState>({
+  profile: null,
+  isLoading: false,
+  error: null,
+});
+
+export function setAilockProfile(profile: FullAilockProfile | null) {
+  ailockStore.setKey('profile', profile);
+  ailockStore.setKey('isLoading', false);
+  ailockStore.setKey('error', null);
+}
+
+export function setAilockLoading(isLoading: boolean) {
+  ailockStore.setKey('isLoading', isLoading);
+}
+
+export function setAilockError(error: string | null) {
+  ailockStore.setKey('error', error);
+  ailockStore.setKey('isLoading', false);
 }

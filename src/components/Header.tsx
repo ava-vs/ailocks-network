@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, ChevronDown, Zap, MapPin, Globe, Bell, LogOut, User, Users, Settings, Plus, LayoutGrid, Search, BarChart, FileText, Bot } from 'lucide-react';
+import { Menu, ChevronDown, Zap, MapPin, Globe, Bell, LogOut, User, Users, Settings, Plus, LayoutGrid, Search, BarChart, FileText, Bot, LogIn } from 'lucide-react';
 import { toggleMobileMenu } from '@/lib/store';
 import { useUserSession } from '@/hooks/useUserSession';
 import { useLocation } from '@/hooks/useLocation';
 import UserHeaderInfo from './Header/UserHeaderInfo';
 import AilockHeaderWidget from './Ailock/AilockHeaderWidget';
+import AuthModal from './Auth/AuthModal';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Header() {
-  const { currentUser, switchUser, isLirea, demoUsersLoaded } = useUserSession();
+  const { currentUser, switchUser } = useUserSession();
+  const { user: authUser, logout } = useAuth();
   const location = useLocation();
   const [isAilockDropdownOpen, setIsAilockDropdownOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const AilockDropdown = () => (
     <div className="absolute top-full left-0 mt-2 w-72 bg-slate-800 border border-slate-700 rounded-lg shadow-lg p-4 z-20">
@@ -113,12 +117,21 @@ export default function Header() {
         <div className="w-px h-6 bg-white/10"></div>
         
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-sm font-bold text-white">
-            L
-          </div>
-          <span className="text-sm text-white/80">{currentUser.name}</span>
+          {authUser ? (
+            <button onClick={logout} className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-white text-sm transition-colors">
+              <LogOut className="w-4 h-4" />
+              {authUser.name || authUser.email}
+            </button>
+          ) : (
+            <button onClick={() => setAuthModalOpen(true)} className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-sm transition-colors">
+              <LogIn className="w-4 h-4" />
+              Sign In
+            </button>
+          )}
         </div>
       </div>
+
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </header>
   );
 }

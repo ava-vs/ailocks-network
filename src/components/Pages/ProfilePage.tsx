@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { ArrowLeft, User, MapPin, Globe, Clock, Edit3, Save, X, Camera, Shield, Bell, Palette, Languages, Trash2 } from 'lucide-react';
-import { useUserSession } from '@/hooks/useUserSession';
-import { useLocation } from '@/hooks/useLocation';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, User, MapPin, Globe, Clock, Edit3, Save, X, Camera, Shield, Bell, Palette, Languages, Trash2, Plus } from 'lucide-react';
+import { useUserSession } from '../../hooks/useUserSession';
+import { useLocation } from '../../hooks/useLocation';
 
 interface UserProfile {
   id: string;
@@ -26,7 +26,7 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
-  const { currentUser, switchUser, isLirea } = useUserSession();
+  const { currentUser, isAuthenticated, isLoading } = useUserSession();
   const location = useLocation();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,33 +35,29 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'profile' | 'preferences' | 'security'>('profile');
 
   useEffect(() => {
-    loadProfile();
-  }, [currentUser.id]);
+    if (!isLoading && isAuthenticated) {
+      loadProfile();
+    }
+  }, [currentUser, isLoading, isAuthenticated]);
 
   const loadProfile = async () => {
     setLoading(true);
     try {
-      // For now, create profile from current user data
+      // Create profile from current user data with fallbacks
       const userProfile: UserProfile = {
         id: currentUser.id,
         name: currentUser.name,
         email: currentUser.email,
-        avatar: currentUser.avatar,
-        country: currentUser.country,
-        city: currentUser.city,
-        timezone: currentUser.timezone,
-        languages: ['en', 'pt'],
-        bio: isLirea 
-          ? 'UX/UI Designer passionate about creating beautiful, user-centered experiences. Recently moved to Rio de Janeiro and exploring new collaboration opportunities.'
-          : 'Project Manager with expertise in fintech and digital transformation. Leading innovative projects in the Brazilian market.',
-        skills: isLirea 
-          ? ['UX Design', 'UI Design', 'Figma', 'Prototyping', 'User Research', 'Design Systems']
-          : ['Project Management', 'Fintech', 'Agile', 'Team Leadership', 'Strategic Planning', 'Digital Transformation'],
-        interests: isLirea
-          ? ['Design Thinking', 'Cultural Exchange', 'Travel', 'Photography', 'Architecture']
-          : ['Innovation', 'Technology', 'Business Strategy', 'Mentoring', 'Startup Ecosystem'],
-        joinedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        lastActive: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=3b82f6&color=ffffff&size=200`,
+        country: currentUser.country || 'Unknown',
+        city: currentUser.city || 'Unknown',
+        timezone: 'UTC', // Default timezone
+        languages: ['en'], // Default language
+        bio: `Hello! I'm ${currentUser.name} and I'm excited to collaborate on interesting projects.`,
+        skills: ['Collaboration', 'Communication'], // Default skills
+        interests: ['Technology', 'Innovation', 'Collaboration'], // Default interests
+        joinedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days ago as fallback
+        lastActive: new Date().toISOString(),
         preferences: {
           theme: 'dark',
           notifications: true,
@@ -128,6 +124,33 @@ export default function ProfilePage() {
     if (diffDays < 30) return `${diffDays} days ago`;
     return date.toLocaleDateString();
   };
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-xl">
+        <div className="animate-spin w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
+
+  // Show auth required message
+  if (!isAuthenticated) {
+    return (
+      <div className="h-full flex items-center justify-center bg-gradient-to-br from-slate-900/95 to-slate-800/95 backdrop-blur-xl">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-white mb-4">Authentication Required</h2>
+          <p className="text-white/60 mb-6">Please sign in to view your profile.</p>
+          <button
+            onClick={() => window.location.href = '/'}
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            Go to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loading || !profile) {
     return (
@@ -463,23 +486,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Demo Account</h3>
-              <div className="space-y-4">
-                <div className="p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg">
-                  <p className="text-blue-400 font-medium mb-2">Switch Demo User</p>
-                  <p className="text-blue-300 text-sm mb-4">
-                    You're currently using {profile.name}. Switch to see the platform from a different perspective.
-                  </p>
-                  <button
-                    onClick={switchUser}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                  >
-                    Switch to {isLirea ? 'Marco (Manager)' : 'Lirea (Designer)'}
-                  </button>
-                </div>
-              </div>
-            </div>
+
 
             <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-red-400 mb-4">Danger Zone</h3>

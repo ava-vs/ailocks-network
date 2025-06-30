@@ -21,6 +21,40 @@ export function refreshDbConnection() {
   return db;
 }
 
+/**
+ * Executes a database operation with automatic retry on transient network errors.
+ * Refreshes the DB connection on 'fetch failed' errors and retries up to maxAttempts times.
+ */
+export async function withDbRetry<T>(
+  operation: () => Promise<T>,
+  maxAttempts: number = 2,
+  backoffMs: number = 200
+): Promise<T> {
+  let attempts = 0;
+  
+  while (attempts < maxAttempts) {
+    try {
+      return await operation();
+    } catch (error: any) {
+      attempts++;
+      console.warn(`DB operation attempt ${attempts} failed:`, error.message);
+      
+      // Check if it's a network error we want to retry
+      if (error.toString().includes('fetch failed') && attempts < maxAttempts) {
+        console.log('Refreshing DB connection and retrying...');
+        refreshDbConnection();
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
+      } else {
+        // Either not a retryable error, or we've exhausted our attempts
+        throw error;
+      }
+    }
+  }
+  
+  // This should never be reached, but TypeScript needs it
+  throw new Error('Failed to execute DB operation after all retry attempts');
+}
+
 export type User = typeof schema.users.$inferSelect;
 export type NewUser = typeof schema.users.$inferInsert;
 export type ChatSession = typeof schema.chatSessions.$inferSelect;
